@@ -1,47 +1,24 @@
-import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
-const DropdownMenu: React.FC = () => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+export default function Header() {
+  const navigate = useNavigate();
 
-  const coursePlans = [
-    { subject: 'Matemática', link: 'https://drive.google.com/your-math-link' },
-    { subject: 'Ciências', link: 'https://drive.google.com/your-science-link' },
-    { subject: 'História', link: 'https://drive.google.com/your-history-link' },
-    { subject: 'Português', link: 'https://drive.google.com/your-portuguese-link' },
-  ];
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  return (
-    <div className="dropdown-container">
-      <button
-        onClick={toggleDropdown}
-        className="dropdown-button"
-        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-      >
-        Planos de Curso
-        <ChevronDown style={{ width: '16px', height: '16px' }} />
-      </button>
-      {isDropdownOpen && (
-        <div className="dropdown-menu">
-          {coursePlans.map((plan, index) => (
-            <a
-              key={index}
-              href={plan.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="dropdown-item"
-            >
-              {plan.subject}
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default DropdownMenu;
+  return (
+    <header className="flex justify-start items-center p-4 bg-[#121212] border-b border-purple-800">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={() => navigate("/planos-de-curso")}
+          className="bg-purple-800 text-white px-4 py-2 rounded-lg transition hover:border hover:border-white"
+        >
+          Planos de Curso
+        </button>
+        <button
+          onClick={() => navigate("/")}
+          className="bg-red-600 text-white px-4 py-2 rounded-lg transition hover:bg-red-700"
+        >
+          Sair
+        </button>
+      </div>
+    </header>
+  );
+}

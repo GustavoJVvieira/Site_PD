@@ -90,8 +90,9 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
     setError("");
     setLoading(true);
 
@@ -183,7 +184,7 @@ export default function Login() {
             }}
           />
         </Box>
-        
+
         <style>
           {`
             @keyframes blob {
@@ -207,7 +208,7 @@ export default function Login() {
           }}
         >
           <CssBaseline />
-          
+
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}

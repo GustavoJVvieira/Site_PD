@@ -23,7 +23,6 @@ async function bootstrap() {
     next();
   });
 
-  console.log('CORS configurado para origin: http://localhost:5173');
   await app.listen(3000);
 }
 bootstrap();
