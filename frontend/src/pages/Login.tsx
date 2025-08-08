@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import api from "../services/api";
+import type { FormEvent } from 'react'; // Importação necessária para o tipo FormEvent
 
 const darkTheme = createTheme({
   palette: {
@@ -90,7 +91,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");

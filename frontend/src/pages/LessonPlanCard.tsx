@@ -370,7 +370,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     const imageRegex = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g;
     const matches = [...text.matchAll(imageRegex)];
 
-    const elements = [];
+    const elements: React.ReactNode[] = []; // Explicitly type the array
     let lastIndex = 0;
 
     matches.forEach(match => {
