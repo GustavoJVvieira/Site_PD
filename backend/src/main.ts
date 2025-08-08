@@ -1,28 +1,22 @@
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Request, Response, NextFunction } from 'express'; // Importar tipos do Express
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Middleware personalizado para CORS
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    res.header('Access-Control-Allow-Origin', 'https://pdteacher.netlify.app/');
-    res.header(
-      'Access-Control-Allow-Methods',
-      'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    );
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
+  // Use a URL do seu frontend do Netlify aqui.
+  // Remova a barra final, pois não é necessária.
+  const netlifyUrl = 'https://pdteacher.netlify.app';
 
-    // Responder imediatamente às requisições OPTIONS
-    if (req.method === 'OPTIONS') {
-      return res.status(204).send();
-    }
-
-    next();
+  // Configuração correta do CORS usando o método nativo do NestJS.
+  app.enableCors({
+    origin: netlifyUrl,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
   });
 
-  await app.listen(3000);
+  // Utilize a variável de ambiente PORT para a porta do servidor, com fallback para 3000.
+  await app.listen(process.env.PORT || 3000);
 }
 bootstrap();
