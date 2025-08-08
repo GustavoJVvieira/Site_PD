@@ -12,7 +12,6 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserEntity } from './entity/users.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { UpdateMoedasDto } from './dto/update-moedas.dto';
 import { Req } from '@nestjs/common';
 
 interface JwtPayload {
@@ -45,13 +44,5 @@ export class UsersController {
     const userId = req.user.id;
     return this.usersService.findUserById(userId);
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Put(':id/moedas')
-  updateMoedas(
-    @Param('id') id: string,
-    @Body() updateMoedasDto: UpdateMoedasDto,
-  ): Promise<UserEntity> {
-    return this.usersService.updateMoedas(id, updateMoedasDto.moedas);
-  }
+  
 }

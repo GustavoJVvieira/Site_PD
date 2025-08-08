@@ -1,0 +1,1087 @@
+/* src/Dashboard.css */
+
+/* Reset básico e estilos globais */
+html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* Fonte moderna */
+    background-color: #1a1a1a; /* Fundo principal preto muito escuro */
+    color: #e0e0e0; /* Cor de texto padrão clara */
+    overflow: hidden; /* Evita scroll indesejado no body */
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+    /* Gradiente sutil em tons de cinza/preto para o fundo */
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+    position: relative; /* Para posicionar os blobs */
+    overflow: hidden; /* Garante que os blobs não causem scroll */
+}
+
+/* Blobs de fundo para o dashboard (agora em tons de cinza/roxo/azul muito escuros) */
+.background-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px); /* Mais blur para um efeito suave e difuso */
+    opacity: 0.2; /* Opacidade reduzida para serem muito sutis no fundo escuro */
+    z-index: 0; /* Garante que fiquem no fundo */
+    animation: blobAnimation 15s infinite alternate; /* Animação suave e bidirecional */
+}
+
+.blob-1 {
+    background-color: rgba(50, 50, 70, 0.8); /* Roxo/cinza muito escuro */
+    width: 400px;
+    height: 400px;
+    top: -100px;
+    left: -100px;
+    animation-delay: 0s;
+}
+
+.blob-2 {
+    background-color: rgba(70, 50, 50, 0.8); /* Vermelho/cinza muito escuro */
+    width: 350px;
+    height: 350px;
+    bottom: -80px;
+    right: -80px;
+    animation-delay: 5s;
+}
+
+.blob-3 {
+    background-color: rgba(50, 70, 70, 0.8); /* Azul/cinza muito escuro */
+    width: 450px;
+    height: 450px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Centraliza este blob */
+    animation-delay: 10s;
+}
+
+@keyframes blobAnimation {
+    0% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0, 0) scale(1); }
+}
+
+
+/* Cabeçalho */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px; /* Aumentado o espaçamento */
+    flex-shrink: 0;
+    position: relative; /* Para ficar acima dos blobs */
+    z-index: 1; 
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Aumentado o gap para melhor espaçamento */
+}
+
+.header-logo {
+    font-size: 18px;
+    font-weight: bold;
+    color: #a78bfa; /* Mantido roxo vibrante para o logo principal */
+    display: flex;
+    align-items: center;
+    margin-right: 5px; /* Espaço entre o "PROJETO" e o "DESENVOLVE" */
+}
+
+.header-logo span { /* Para a parte "DESENVOLVE" */
+    color: #ff9900; /* Mantido laranja para destaque */
+}
+
+.header-profile-initials {
+    background: #ff9900; /* Cor laranja forte para o círculo PP */
+    border-radius: 50%;
+    padding: 6px 10px; /* Ajustado padding */
+    color: #1a1a1a; /* Texto escuro no fundo laranja (ajustado para o novo fundo preto) */
+    font-weight: 700;
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(255, 153, 0, 0.4); /* Sombra para o círculo */
+    cursor: pointer; /* Indica que é clicável */
+    transition: transform 0.2s ease-in-out;
+}
+
+.header-profile-initials:hover {
+    transform: scale(1.05); /* Efeito de zoom no hover */
+}
+
+.header-title {
+    font-size: 28px; /* Aumentado tamanho da fonte */
+    font-weight: 800; /* Mais bold */
+    color: #ffffff;
+    letter-spacing: -0.5px; /* Leve ajuste de espaçamento */
+}
+
+.header-subtitle {
+    font-size: 13px; /* Levemente maior */
+    color: #a0aec0; /* Tom de cinza para o subtítulo */
+    margin-top: 6px; /* Mais espaço */
+}
+
+/* Layout Principal em Grid */
+.main-content-grid {
+    flex-grow: 1;
+    display: grid;
+    gap: 25px; /* Aumentado o gap entre as colunas */
+    grid-template-columns: 3fr 1fr; 
+    min-height: 0; /* Essencial para que o flex-grow funcione com overflow-y */
+    overflow: hidden; /* Garante que os cards internos controlem o scroll */
+    position: relative; /* Para ficar acima dos blobs */
+    z-index: 1;
+}
+
+.left-column, .right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 25px; /* Aumentado o gap entre os cards */
+    min-height: 0; /* Permite que o conteúdo interno dos cards seja scrollável */
+}
+
+/* Estilo dos Cards */
+.card {
+    background: rgba(25, 25, 25, 0.7); /* Fundo dos cards com transparência e tom de preto mais suave */
+    border: 1px solid rgba(167, 139, 250, 0.3);
+    border-radius: 12px; /* Mais arredondado */
+    padding: 20px; /* Aumentado o padding */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4); /* Sombra mais pronunciada */
+    width: auto; /* Deixa o grid controlar a largura */
+    backdrop-filter: blur(8px); /* Efeito de vidro borrado um pouco mais sutil */
+    -webkit-backdrop-filter: blur(8px); /* Para compatibilidade com Safari */
+}
+
+.card.flex-grow {
+    flex-grow: 1; 
+    min-height: 0; 
+    overflow-y: auto; /* Habilita scroll para o conteúdo do card quando necessário */
+    padding-right: 8px; /* Adiciona padding para barra de rolagem não cobrir conteúdo */
+}
+
+/* Scrollbar styling for webkit browsers */
+.card.flex-grow::-webkit-scrollbar {
+    width: 8px;
+}
+
+.card.flex-grow::-webkit-scrollbar-track {
+    background: #1a1a1a; /* Cor da trilha da scrollbar em tom de preto */
+    border-radius: 10px;
+}
+
+.card.flex-grow::-webkit-scrollbar-thumb {
+    background-color: #555555; /* Cor do "polegar" da scrollbar em cinza médio */
+    border-radius: 10px;
+    border: 2px solid #1a1a1a; /* Borda para contraste */
+}
+
+.card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Aumentado o gap */
+    font-size: 18px; /* Aumentado a fonte */
+    font-weight: 700; /* Mais bold */
+    color: #a78bfa; /* Mantido roxo vibrante para títulos de card */
+    margin-bottom: 15px; /* Mais espaço */
+}
+
+.card-description {
+    color: #a0aec0; /* Cor para descrições */
+    font-size: 14px;
+    margin-bottom: 15px; /* Mais espaço */
+}
+
+/* Textarea e Botão Gerar */
+.textarea-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.textarea {
+    background: rgba(0, 0, 0, 0.6); /* Fundo mais escuro para o textarea */
+    border: 1px solid #3a3a3a; /* Borda cinza escura */
+    color: #ffffff;
+    min-height: 100px; /* Altura mínima maior */
+    padding: 12px; /* Mais padding */
+    border-radius: 8px; /* Mais arredondado */
+    width: 90%; /* Ajustado largura */
+    box-sizing: border-box;
+    font-size: 15px; /* Fonte maior */
+    resize: vertical;
+    outline: none; /* Remove outline padrão */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Transições para foco */
+}
+
+.textarea::placeholder {
+    color: #718096; /* Cor do placeholder */
+}
+
+.textarea:focus {
+    border-color: #ff9900; /* Borda laranja ao focar */
+    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.3); /* Sombra de foco laranja */
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+}
+
+.generate-button {
+    width: 90%; /* Mesma largura do textarea */
+    background: linear-gradient(90deg, #a78bfa, #8a4af3); /* Mantido gradiente roxo */
+    color: #ffffff;
+    font-weight: 700; /* Mais bold */
+    padding: 12px 20px; /* Mais padding */
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease; /* Transição para todas as propriedades */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 16px; /* Fonte maior */
+    box-shadow: 0 4px 10px rgba(138, 74, 243, 0.4); /* Sombra para o botão */
+}
+
+.generate-button:hover:not(:disabled) {
+    background: linear-gradient(90deg, #8a4af3, #a78bfa); /* Inverte o gradiente no hover */
+    transform: translateY(-2px); /* Efeito de elevação */
+    box-shadow: 0 6px 15px rgba(138, 74, 243, 0.6);
+}
+
+.generate-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Spinner (Loader) */
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    min-height: 150px;
+}
+
+.spinner-circle {
+    width: 30px; /* Maior */
+    height: 30px; /* Maior */
+    border: 4px solid transparent; /* Borda mais grossa */
+    border-bottom-color: #ff9900; /* Cor laranja */
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite; /* Mais rápido */
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Mensagem de Erro */
+.error-message {
+    background-color: rgba(255, 0, 0, 0.15);
+    color: #ff6b6b; /* Vermelho claro */
+    border: 1px solid #ff6b6b;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 15px;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Seção de Plano de Aula Gerado */
+.lesson-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* Alinha verticalmente */
+    margin-bottom: 20px; /* Mais espaço */
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(100, 100, 100, 0.2); /* Borda mais sutil em cinza */
+}
+
+.lesson-title {
+    font-size: 22px; /* Maior */
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.save-button {
+    border: 1px solid #ff9900; /* Borda laranja */
+    color: #ff9900; /* Texto laranja */
+    background: transparent;
+    padding: 8px 12px; /* Mais padding */
+    border-radius: 6px; /* Mais arredondado */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.3s ease, color 0.3s ease, transform 0.2s ease;
+    font-size: 14px;
+}
+
+.save-button:hover {
+    background: rgba(255, 153, 0, 0.2); /* Fundo laranja transparente no hover */
+    color: #ffffff; /* Texto branco no hover */
+    transform: translateY(-2px); /* Efeito de elevação */
+}
+
+.section-title {
+    font-size: 18px; /* Maior */
+    font-weight: 700;
+    color: #a78bfa; /* Mantido roxo forte */
+    margin-bottom: 10px;
+    margin-top: 25px; /* Mais espaço acima das seções */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Separadores entre as seções */
+.divider {
+    border: none;
+    border-top: 1px solid rgba(100, 100, 100, 0.1); /* Divisor em cinza sutil */
+    margin: 25px 0; /* Mais espaço para o divisor */
+}
+
+.text-content {
+    color: #c0c0c0; /* Texto mais claro para o conteúdo */
+    font-size: 15px; /* Fonte ligeiramente maior */
+    line-height: 1.7; /* Melhorar legibilidade */
+}
+
+/* Listas */
+ul.text-content {
+    list-style: none; /* Remove bullet padrão */
+    padding-left: 0; /* Remove padding padrão da lista */
+}
+
+.text-content.list-item {
+    margin-left: 20px;
+    position: relative;
+    padding-left: 15px; /* Espaço para o bullet customizado */
+    margin-bottom: 8px; /* Espaço entre itens da lista */
+}
+
+.text-content.list-item::before {
+    content: '•'; /* Bullet point */
+    color: #ff9900; /* Cor laranja para o bullet */
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-weight: bold;
+    font-size: 1.2em;
+    line-height: 1.7; /* Alinha o bullet com a linha do texto */
+}
+
+/* Blocos de Código */
+.code-block {
+    background: rgba(0, 0, 0, 0.7); /* Fundo mais escuro para o código */
+    padding: 15px; /* Mais padding */
+    border-radius: 8px; /* Mais arredondado */
+    margin-top: 12px;
+    margin-bottom: 20px; /* Mais espaço após código */
+    overflow-x: auto;
+    border: 1px solid rgba(100, 100, 100, 0.3); /* Borda sutil em cinza */
+}
+
+.code-pre {
+    color: #e0e0e0; /* Cor do texto do código */
+    font-family: 'Fira Code', 'Cascadia Code', monospace; /* Fontes monoespaçadas bonitas */
+    font-size: 14px;
+    margin: 0;
+    white-space: pre-wrap; /* Quebra de linha automática */
+    word-break: break-all;
+}
+
+/* Acordeão (Método de Ensino) */
+.accordion-item {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Aumentado gap */
+    padding: 10px 15px; /* Mais padding */
+    border-bottom: 1px solid rgba(100, 100, 100, 0.15); /* Borda mais sutil */
+    cursor: pointer;
+    transition: background 0.3s ease;
+    border-radius: 8px; /* Para que o hover fique arredondado */
+    margin-bottom: 5px; /* Espaço entre os itens */
+}
+.accordion-item:last-child {
+    border-bottom: none; /* Remove borda do último item */
+}
+
+.accordion-item:hover {
+    background: rgba(100, 100, 100, 0.08); /* Fundo sutil no hover em cinza */
+}
+
+.accordion-letter {
+    width: 30px; /* Maior */
+    height: 30px; /* Maior */
+    border-radius: 6px; /* Mais quadrado, com cantos arredondados */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700; /* Mais bold */
+    font-size: 14px; /* Maior */
+    color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+/* Cores específicas para as letras do acordeão, se houver (mantidas, pois dão um toque de cor) */
+.accordion-letter.B { background-color: #8a4af3; } /* Roxo */
+.accordion-letter.R { background-color: #ff4081; } /* Rosa */
+.accordion-letter.I { background-color: #40a9ff; } /* Azul */
+.accordion-letter.D { background-color: #a78bfa; } /* Roxo mais claro */
+.accordion-letter.G { background-color: #ff9900; } /* Laranja */
+
+
+.accordion-title {
+    font-size: 15px; /* Maior */
+    font-weight: 600;
+    color: #ffffff;
+    flex-grow: 1;
+}
+
+.accordion-time {
+    font-size: 13px; /* Maior */
+    color: #a0aec0;
+}
+
+.accordion-content {
+    color: #c0c0c0;
+    font-size: 14px;
+    padding: 10px 20px 10px 42px; /* Ajustado padding para alinhar com a letra */
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, opacity 0.4s ease-out; /* Transições mais suaves */
+}
+.accordion-content:not(.active) {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+.accordion-content.active {
+    max-height: 200px; /* Ajuste para um valor que acomode a maioria dos conteúdos, ou use JS para calcular dinamicamente */
+    opacity: 1;
+}
+
+/* Estatísticas */
+.stats-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px; /* Maior */
+    margin-bottom: 10px; /* Mais espaço */
+}
+
+.stats-label {
+    color: #a0aec0;
+}
+
+.stats-value {
+    font-weight: 600;
+    color: #a78bfa; /* Mantido roxo para valores de destaque */
+}
+
+.stats-value.active { /* Para o "Ativa" no "Suas Estatísticas" */
+    color: #ff9900; /* Mantido laranja para indicar ativo */
+    font-weight: bold;
+}
+
+
+/* Utilidades de espaçamento (já presentes, mas garantindo) */
+.mb-4 { margin-bottom: 16px; }
+.mt-4 { margin-top: 16px; }
+.flex-col { display: flex; flex-direction: column; }
+.gap-2 { gap: 8px; }
+.gap-4 { gap: 16px; }
+
+/* Media Queries para Responsividade */
+@media (max-width: 1024px) { /* Ajustado para 1024px para melhor transição em tablets */
+    .main-content-grid {
+        grid-template-columns: 1fr; /* Uma única coluna em telas menores */
+    }
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    .header-profile-initials { /* Já estava correto como header-profile-initials */
+        margin-top: 15px;
+        align-self: flex-end; /* Alinha à direita no modo coluna */
+    }
+    .card {
+        width: auto; /* Remove width fixo para preencher 100% */
+    }
+    .textarea {
+        width: 100%; /* Ocupa toda a largura disponível */
+    }
+    .generate-button {
+        width: 100%; /* Ocupa toda a largura disponível */
+    }
+    /* Ajustes para blobs em telas menores */
+    .background-blob {
+        filter: blur(80px); /* Menos blur para evitar sobrecarga */
+        opacity: 0.15; /* Menos opacidade */
+    }
+    .blob-1 { width: 250px; height: 250px; top: -50px; left: -50px; }
+    .blob-2 { width: 200px; height: 200px; bottom: -40px; right: -40px; }
+    .blob-3 { width: 300px; height: 300px; }
+}
+
+@media (max-width: 500px) { /* Ajustes para mobile muito pequenos */
+    .app-container {
+        padding: 15px;
+    }
+    .header-title {
+        font-size: 24px;
+    }
+    .header-subtitle {
+        font-size: 12px;
+    }
+    .card {
+        padding: 15px;
+    }
+    .card-title-group {
+        font-size: 16px;
+    }
+    .section-title {
+        font-size: 17px;
+    }
+    .lesson-title {
+        font-size: 20px;
+    }
+    .background-blob {
+        filter: blur(60px);
+        opacity: 0.1;
+    }
+    .blob-1, .blob-2, .blob-3 {
+        display: none; /* Opcional: remover blobs em telas muito pequenas para performance */
+    }
+
+    /* Para o grupo de botões (Salvar e Editar) */
+.button-group {
+    display: flex;
+    gap: 8px; /* Espaçamento entre os botões */
+}
+
+/* Estilo do botão de edição */
+.edit-button {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background-color: #6b46c1; /* Cor primária */
+    color: white;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.edit-button:hover:not(:disabled) {
+    background-color: #5a3c9e; /* Tom mais escuro no hover */
+}
+
+.edit-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Estilos do Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.modal-close-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #777;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.modal-close-button:hover {
+    background-color: #f0f0f0;
+}
+
+.modal-description {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 15px;
+}
+
+.textarea-modal {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    min-height: 120px;
+    resize: vertical;
+    box-sizing: border-box; /* Garante que padding e border não aumentem a largura */
+}
+
+.textarea-modal:focus {
+    outline: none;
+    border-color: #6b46c1;
+    box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.2);
+}
+
+.modal-body .generate-button { /* Reutiliza o estilo do botão de gerar */
+    width: auto;
+    align-self: flex-end; /* Alinha o botão à direita no modal */
+    margin-top: 15px;
+}
+/* Dashboard.css - Adicione estes estilos */
+
+/* Para o grupo de botões (Salvar e Editar) */
+.button-group {
+    display: flex;
+    gap: 8px; /* Espaçamento entre os botões */
+    align-items: center; /* Alinha verticalmente os itens */
+}
+
+/* Estilo do botão de edição */
+.edit-button,
+.cancel-edit-button { /* Aplica estilo base para ambos */
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.edit-button {
+    background-color: #6b46c1; /* Cor primária */
+    color: white;
+}
+
+.edit-button:hover:not(:disabled) {
+    background-color: #5a3c9e; /* Tom mais escuro no hover */
+}
+
+.edit-button:disabled,
+.cancel-edit-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Estilo do botão de cancelar edição */
+.cancel-edit-button {
+    background-color: #e74c3c; /* Vermelho para cancelar */
+    color: white;
+}
+
+.cancel-edit-button:hover:not(:disabled) {
+    background-color: #c0392b;
+}
+
+/* Estilo do botão Salvar e Refinar (reutiliza o save-button, mas com cor diferente) */
+.confirm-edit-button {
+    background-color: #27ae60; /* Verde para confirmar */
+}
+
+.confirm-edit-button:hover:not(:disabled) {
+    background-color: #219d54;
+}
+
+/* Estilos para os Textareas Editáveis */
+.editable-textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    line-height: 1.5;
+    background-color: #f8f8f8; /* Um pouco de cor de fundo para indicar que é editável */
+    resize: vertical; /* Permite redimensionar verticalmente */
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box; /* Garante que padding e border não aumentem a largura */
+    font-family: inherit; /* Mantém a fonte do sistema */
+}
+
+.editable-textarea:focus {
+    outline: none;
+    border-color: #6b46c1;
+    box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.2);
+    background-color: #fff;
+}
+
+/* Estilo específico para textarea de código, se necessário */
+.code-textarea {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    font-size: 0.9em;
+    background-color: #eee; /* Fundo mais escuro para código */
+}
+
+/* Estilo para o título da aula editável */
+.editable-title-textarea {
+    font-size: 1.8rem; /* Tamanho da fonte do título original */
+    font-weight: 700;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 5px 10px;
+    background-color: #f8f8f8;
+    resize: none; /* Não permitir redimensionamento */
+    overflow: hidden; /* Esconder scrollbar se houver */
+    box-sizing: border-box;
+    width: auto; /* Deixa o textarea se ajustar ao conteúdo */
+    max-width: 100%;
+}
+
+.editable-title-textarea:focus {
+    outline: none;
+    border-color: #6b46c1;
+    box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.2);
+    background-color: #fff;
+}
+
+/* Ajustes para o layout do título da aula quando é textarea */
+.lesson-header {
+    display: flex;
+    flex-wrap: wrap; /* Permite que os itens quebrem linha em telas menores */
+    justify-content: space-between;
+    align-items: flex-start; /* Alinha o título no topo */
+    margin-bottom: 20px;
+    gap: 10px; /* Espaçamento entre o título e os botões */
+}
+
+/* Dashboard.css - Garanta que estes estilos estejam presentes e, se necessário, ajuste o seletor do spinner-dots */
+
+/* Botão de Chat com IA */
+.chat-button {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: #34495e; /* Cor neutra para o chat */
+    color: white;
+}
+
+.chat-button:hover:not(:disabled) {
+    background-color: #2c3e50;
+}
+
+.chat-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Sidebar do Chat */
+.chat-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 350px; /* Largura do painel do chat */
+    height: 100vh;
+    background-color: #fff;
+    border-left: 1px solid #eee;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000; /* Garante que fique acima de outros elementos */
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    background-color: #f8f8f8;
+}
+
+.chat-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.close-chat-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    display: flex; /* Para alinhar o ícone */
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-chat-button:hover {
+    background-color: #eee;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto; /* Permite scrollar as mensagens */
+    background-color: #fcfcfc;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espaçamento entre as mensagens */
+}
+
+.no-messages-placeholder {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+    padding: 20px;
+}
+
+.chat-message {
+    max-width: 85%; /* Limita a largura da mensagem */
+    padding: 10px 15px;
+    border-radius: 18px; /* Cantos mais arredondados */
+    word-wrap: break-word; /* Quebra palavras longas */
+    line-height: 1.5;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.chat-message.user {
+    align-self: flex-end; /* Mensagens do usuário à direita */
+    background-color: #6b46c1; /* Cor primária */
+    color: white;
+    border-bottom-right-radius: 4px; /* Canto inferior direito menos arredondado */
+}
+
+.chat-message.ai {
+    align-self: flex-start; /* Mensagens da IA à esquerda */
+    background-color: #e2e8f0; /* Cinza claro */
+    color: #333;
+    border-bottom-left-radius: 4px; /* Canto inferior esquerdo menos arredondado */
+}
+
+.chat-message .message-text {
+    margin: 0;
+}
+
+/* Preview do plano sugerido pela IA */
+.ai-plan-preview {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.ai-plan-preview h4 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 1em;
+}
+
+.ai-plan-preview .ai-plan-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #6b46c1;
+}
+
+.ai-plan-preview .ai-plan-summary {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 10px 0;
+}
+
+.ai-plan-preview .ai-plan-summary li {
+    margin-bottom: 3px;
+    overflow: hidden; /* Esconde texto que excede a linha */
+    text-overflow: ellipsis; /* Adiciona "..." */
+    white-space: nowrap; /* Impede quebras de linha */
+}
+
+
+.apply-plan-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 8px 10px;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.apply-plan-button:hover {
+    background-color: #219d54;
+}
+
+
+/* Área de Input do Chat */
+.chat-input-area {
+    display: flex;
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    background-color: #f8f8f8;
+    gap: 10px;
+    align-items: center; /* Centraliza verticalmente o textarea e botão */
+}
+
+.chat-input-area textarea {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    resize: none; /* Impede redimensionamento manual */
+    min-height: 40px; /* Altura mínima */
+    max-height: 100px; /* Altura máxima para evitar chat muito grande */
+    font-family: inherit;
+    font-size: 0.95em;
+    box-sizing: border-box;
+}
+
+.chat-input-area textarea:focus {
+    outline: none;
+    border-color: #6b46c1;
+    box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.2);
+}
+
+.chat-input-area button {
+    padding: 10px; /* Apenas padding para o ícone */
+    background-color: #6b46c1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+    display: flex; /* Para alinhar o ícone */
+    align-items: center;
+    justify-content: center;
+    min-width: 40px; /* Garante que o botão tenha um tamanho mínimo para o ícone */
+    min-height: 40px;
+}
+
+.chat-input-area button:hover:not(:disabled) {
+    background-color: #5a3c9e;
+}
+
+.chat-input-area button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.enter-hint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #888;
+    font-size: 0.8em;
+    position: absolute; /* Posiciona o hint */
+    bottom: 5px; /* Ajuste conforme a altura do seu input */
+    right: 70px; /* Ajuste conforme a largura do seu botão */
+    background-color: #f8f8f8;
+    padding: 2px 5px;
+    border-radius: 4px;
+    pointer-events: none; /* Garante que o hint não interfira com cliques no input */
+}
+
+
+/* Spinner de três pontos para a IA */
+.spinner-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.spinner-dots span {
+  width: 8px;
+  height: 8px;
+  background-color: #6b46c1;
+  border-radius: 50%;
+  margin: 0 4px;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.spinner-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.spinner-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+.spinner-dots span:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+/* Estilo para a mensagem da IA enquanto pensa */
+.chat-message.ai.thinking {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    align-self: center;
+}
+
+}

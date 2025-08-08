@@ -33,19 +33,6 @@ export class UsersService {
     return this.userRepository.find();
   }
 
-  async updateMoedas(id: string, moedasToAdd: number): Promise<UserEntity> {
-    const user = await this.userRepository.findOne({ where: { id } });
-
-    if (!user) {
-      throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
-    }
-
-    // Se user.moedas for null ou undefined, inicializa com 0
-    user.moedas = (user.moedas || 0) + moedasToAdd;
-
-    return this.userRepository.save(user);
-  }
-
   async findUserById(id: string): Promise<UserEntity> {
     const user = await this.userRepository.findOne({ where: { id } });
 

@@ -1,0 +1,242 @@
+/* src/ChatSidebar.css - Ajuste estes estilos */
+
+.chat-main-view { /* Renomeado de .chat-sidebar */
+    background-color: var(--dark-secondary);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Para ocupar o espaço disponível na coluna */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); /* Sombra mais sutil */
+    height: 100%; /* Ocupa a altura do pai (o card) */
+    max-height: 700px; /* Um limite para evitar que fique muito alto */
+    overflow: hidden; /* Garante que o conteúdo interno respeite as bordas */
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 15px;
+}
+
+.chat-header h2 {
+    color: var(--text-primary);
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.close-chat-button { /* Botão de voltar ao plano */
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.close-chat-button:hover {
+    background-color: var(--dark-purple-hover);
+}
+
+.chat-messages {
+    flex-grow: 1; /* Permite que a área de mensagens ocupe o espaço restante */
+    overflow-y: auto; /* Adiciona rolagem para as mensagens */
+    padding-right: 10px; /* Para dar espaço à barra de rolagem */
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column; /* Mensagens se empilham verticalmente */
+}
+
+.message-bubble {
+    padding: 10px 15px;
+    border-radius: 18px;
+    margin-bottom: 10px;
+    max-width: 80%;
+    word-wrap: break-word; /* Garante que o texto quebre linhas */
+    line-height: 1.4;
+}
+
+.message-bubble.user {
+    background-color: var(--purple-accent);
+    color: white;
+    align-self: flex-end; /* Alinha as mensagens do usuário à direita */
+    border-bottom-right-radius: 4px; /* Ajuste para visual de balão de chat */
+}
+
+.message-bubble.ai {
+    background-color: var(--dark-tertiary);
+    color: var(--text-primary);
+    align-self: flex-start; /* Alinha as mensagens da IA à esquerda */
+    border-bottom-left-radius: 4px; /* Ajuste para visual de balão de chat */
+}
+
+.chat-welcome-message {
+    background-color: var(--dark-tertiary);
+    color: var(--text-muted);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.chat-textarea {
+    flex-grow: 1;
+    background-color: var(--dark-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 15px;
+    color: var(--text-primary);
+    font-size: 1em;
+    min-height: 40px;
+    resize: vertical; /* Permite redimensionar verticalmente */
+    max-height: 150px; /* Limite máximo para a altura do textarea */
+}
+
+.chat-textarea:focus {
+    outline: none;
+    border-color: var(--purple-accent);
+    box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.3);
+}
+
+.chat-textarea:disabled {
+    background-color: var(--dark-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.send-button {
+    background-color: var(--purple-accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.send-button:hover:not(:disabled) {
+    background-color: var(--dark-purple-hover);
+}
+
+.send-button:disabled {
+    background-color: var(--dark-muted);
+    cursor: not-allowed;
+}
+
+.message-bubble.ai .apply-ai-plan-button {
+    background-color: var(--green-accent); /* Cor verde para destaque */
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-size: 0.9em;
+    display: block; /* Ocupa a largura total do balão */
+    width: 100%;
+    transition: background-color 0.2s ease;
+}
+
+.message-bubble.ai .apply-ai-plan-button:hover:not(:disabled) {
+    background-color: var(--green-darker);
+}
+
+.message-bubble.ai .apply-ai-plan-button:disabled {
+    background-color: var(--dark-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+
+/* Spinner de 3 pontos para "pensando" */
+.dot-pulse {
+  position: relative;
+  left: -9999px;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background-color: var(--text-primary); /* Cor dos pontos */
+  color: var(--text-primary); /* Cor dos pontos */
+  box-shadow: 9999px 0 0 -5px;
+  animation: dotPulse 1.5s infinite linear;
+  animation-delay: .25s;
+}
+
+.dot-pulse::before, .dot-pulse::after {
+  content: '';
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background-color: var(--text-primary); /* Cor dos pontos */
+  color: var(--text-primary); /* Cor dos pontos */
+}
+
+.dot-pulse::before {
+  box-shadow: 9984px 0 0 -5px;
+  animation: dotPulseBefore 1.5s infinite linear;
+  animation-delay: 0s;
+}
+
+.dot-pulse::after {
+  box-shadow: 10014px 0 0 -5px;
+  animation: dotPulseAfter 1.5s infinite linear;
+  animation-delay: .5s;
+}
+
+@keyframes dotPulseBefore {
+  0% {
+    box-shadow: 9984px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 9984px 0 0 2px;
+  }
+  60%,
+  100% {
+    box-shadow: 9984px 0 0 -5px;
+  }
+}
+
+@keyframes dotPulse {
+  0% {
+    box-shadow: 9999px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 9999px 0 0 2px;
+  }
+  60%,
+  100% {
+    box-shadow: 9999px 0 0 -5px;
+  }
+}
+
+@keyframes dotPulseAfter {
+  0% {
+    box-shadow: 10014px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 10014px 0 0 2px;
+  }
+  60%,
+  100% {
+    box-shadow: 10014px 0 0 -5px;
+  }
+}

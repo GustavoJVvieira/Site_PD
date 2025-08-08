@@ -11,7 +11,7 @@ import { JwtStrategy } from './jwt.strategy';
 @Module({
   imports: [
     UsersModule,
-    PassportModule, // ✅ Importante para habilitar o passport
+    PassportModule, 
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -25,7 +25,7 @@ import { JwtStrategy } from './jwt.strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
-    JwtStrategy, // ✅ Adiciona aqui!
+    JwtStrategy, 
   ],
   exports: [AuthService],
 })
