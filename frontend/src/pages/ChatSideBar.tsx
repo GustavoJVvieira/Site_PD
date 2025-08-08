@@ -54,7 +54,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         Se for JSON, inclua apenas o JSON.
       `.trim();
 
-      const response = await fetch('http://localhost:3000/gemini/chat-with-lesson-plan', {
+      const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

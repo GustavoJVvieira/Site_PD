@@ -8,7 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { GeminiModule } from './gemini/gemini.module';
 import { AulaCurriculoModule } from './aula-curriculo/aula-curriculo.module'; 
 import { AulaCurriculoEntity } from './aula-curriculo/aula-curriculo.entity'; 
-import { SlidesModule } from './slides/slides.module';
+
 
 @Module({
   imports: [
@@ -41,7 +41,6 @@ import { SlidesModule } from './slides/slides.module';
     
     AulaCurriculoModule,
     
-    SlidesModule, 
   ],
   controllers: [AppController], 
   providers: [AppService], 

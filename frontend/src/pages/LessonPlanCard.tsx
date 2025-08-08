@@ -304,7 +304,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3000/gemini/generate-lesson-plan', {
+      const response = await fetch('https://site-pd.onrender.com/gemini/generate-lesson-plan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
