@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, FileText, Presentation, Edit, CheckSquare } from 'lucide-react';
@@ -17,13 +17,13 @@ export interface Planejamento {
     metodologia: string;
     cenario: string;
     pergunta_problema: string;
-    importancia: string;
+    importancia: string | string[];
   };
   investigacao: {
     titulo: string;
     metodologia: string;
-    perguntas_guiadas: string;
-    elementos_descobertos: string;
+    perguntas_guiadas: string | string[];
+    elementos_descobertos: string | string[];
   };
   solucao_pratica: {
     titulo: string;
@@ -33,14 +33,14 @@ export interface Planejamento {
   mini_projeto: {
     titulo: string;
     metodologia: string;
-    desafio: string;
+    desafio: string | string[];
   };
   sugestaoAulasCSV?: {
     idAula: string;
     temaAula: string;
     justificativa: string;
   }[];
-  observacoesIA?: string; 
+  observacoesIA?: string;
 }
 
 export interface LessonPlanCardProps {
@@ -83,11 +83,18 @@ export const mockPlanejamento: Planejamento = {
   investigacao: {
     titulo: "Investigação",
     metodologia: "Pesquisa guiada",
-    perguntas_guiadas: `1. Quais são os principais desafios do trânsito na cidade?
-    2. Que tipos de dados podem ser coletados para analisar o trânsito (ex: câmeras, sensores)?
-    3. Como um algoritmo de IA poderia processar esses dados para tomar decisões?
-    4. Qual a diferença entre um semáforo inteligente e um tradicional?`,
-    elementos_descobertos: "Aprendizado de máquina, visão computacional, coleta e análise de dados, otimização de algoritmos.",
+    perguntas_guiadas: [
+      "Quais são os principais desafios do trânsito na cidade?",
+      "Que tipos de dados podem ser coletados para analisar o trânsito (ex: câmeras, sensores)?",
+      "Como um algoritmo de IA poderia processar esses dados para tomar decisões?",
+      "Qual a diferença entre um semáforo inteligente e um tradicional?",
+    ],
+    elementos_descobertos: [
+      "Aprendizado de máquina",
+      "Visão computacional",
+      "Coleta e análise de dados",
+      "Otimização de algoritmos",
+    ],
   },
   solucao_pratica: {
     titulo: "Solução Prática",
@@ -112,7 +119,10 @@ export const mockPlanejamento: Planejamento = {
   mini_projeto: {
     titulo: "Mini-Projeto",
     metodologia: "Construção de modelo",
-    desafio: "Crie um fluxograma ou um pequeno protótipo (pode ser com blocos de programação) de como um semáforo inteligente poderia funcionar, levando em conta os dados que vocês investigaram. O objetivo é apresentar sua solução para a turma.",
+    desafio: [
+      "Crie um fluxograma ou um pequeno protótipo (pode ser com blocos de programação) de como um semáforo inteligente poderia funcionar, levando em conta os dados que vocês investigaram.",
+      "O objetivo é apresentar sua solução para a turma.",
+    ],
   },
   sugestaoAulasCSV: [
     {
@@ -124,7 +134,7 @@ export const mockPlanejamento: Planejamento = {
       idAula: "105",
       temaAula: "Coleta e Análise de Dados",
       justificativa: "A IA é fortemente baseada em dados, e esta aula ensina as técnicas para coletá-los e interpretá-los, o que é crucial para qualquer projeto.",
-    }
+    },
   ],
   observacoesIA: "O plano de aula foi gerado com foco em uma abordagem prática, conectando conceitos abstratos de IA a um problema cotidiano. As metodologias sugeridas visam o engajamento e o trabalho em equipe.",
 };
@@ -146,6 +156,14 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const lessonPlanRef = useRef<HTMLDivElement>(null);
   const currentPlanejamento = isEditMode && editedPlanejamento ? editedPlanejamento : planejamento;
   const [isGeneratingSlides, setIsGeneratingSlides] = useState<boolean>(false);
+
+  // Adiciona useEffect para monitorar mudanças no planejamento
+  useEffect(() => {
+    console.log('--- Estado do planejamento atualizado ---');
+    console.log('Planejamento:', planejamento);
+    console.log('CurrentPlanejamento:', currentPlanejamento);
+    console.log('---------------------------------------');
+  }, [planejamento, currentPlanejamento]);
 
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
@@ -210,6 +228,17 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           doc.setFont('helvetica', 'bold');
           doc.text(`${field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}:`, margin, currentY);
           currentY += lineHeight * 0.7;
+          if (Array.isArray(fieldText)) {
+            fieldText.forEach((item: string) => {
+              const wrappedText = doc.splitTextToSize(item, pdfWidth - 2 * margin);
+              doc.text(wrappedText, margin, currentY);
+              currentY += wrappedText.length * lineHeight;
+            });
+          } else {
+            const wrappedText = doc.splitTextToSize(fieldText, pdfWidth - 2 * margin);
+            doc.text(wrappedText, margin, currentY);
+            currentY += wrappedText.length * lineHeight;
+          }
         }
       });
       currentY += lineHeight;
@@ -221,6 +250,10 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       doc.setTextColor(50, 50, 50);
       doc.text('Observações da IA', margin, currentY);
       currentY += lineHeight;
+      const wrappedText = doc.splitTextToSize(currentPlanejamento.observacoesIA, pdfWidth - 2 * margin);
+      doc.setFontSize(pFontSize);
+      doc.text(wrappedText, margin, currentY);
+      currentY += wrappedText.length * lineHeight;
     }
 
     const fileName = currentPlanejamento?.tituloAula ? `${currentPlanejamento.tituloAula.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf` : 'plano_de_aula_padronizado.pdf';
@@ -282,9 +315,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       [Descrição da imagem do Slide 2]
       ... e assim por diante para todos os 6 slides.
     `;
-      
+
     try {
-      // CORREÇÃO: Esta chamada já está correta, pois a intenção é receber texto puro
       const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -310,7 +342,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         setError('Formato de resposta inválido do backend.');
         console.error('Resposta inválida:', data);
       }
-      
     } catch (err: any) {
       console.error('Erro ao gerar plano de slides:', err);
       setError(err.message || 'Falha ao gerar o plano de slides. Por favor, tente novamente.');
@@ -346,7 +377,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         doc.addPage();
         currentY = 20;
       }
-      
+
       const lines = slideContent.split('\n');
       lines.forEach(line => {
         if (line.trim().length > 0) {
@@ -405,13 +436,13 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       setError('Por favor, descreva o tema ou conteúdo da aula.');
       return;
     }
-    
-    if (demanda.trim().toUpperCase() === "TESTE") {
-        setPlanejamento(mockPlanejamento);
-        setEditedPlanejamento(mockPlanejamento);
-        setIsGenerating(false);
-        setError(null);
-        return;
+
+    if (demanda.trim().toUpperCase() === 'TESTE') {
+      setPlanejamento(mockPlanejamento);
+      setEditedPlanejamento(mockPlanejamento);
+      setIsGenerating(false);
+      setError(null);
+      return;
     }
 
     setIsGenerating(true);
@@ -440,13 +471,13 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           "metodologia": "Metodologia a ser utilizada (Ex: Estudo de caso, Análise de cenários)",
           "cenario": "Descrição de um cenário real ou fictício que contextualiza o problema. Pode conter links ou imagens em formato markdown.",
           "pergunta_problema": "A pergunta central que o problema levanta.",
-          "importancia": "Explicação da relevância do problema na vida real dos alunos. Pode ser em formato de lista."
+          "importancia": ["Explicação da relevância do problema na vida real dos alunos, em formato de lista."]
         },
         "investigacao": {
           "titulo": "Investigação",
           "metodologia": "Metodologia a ser utilizada (Ex: Pesquisa guiada, Exploração de recursos)",
-          "perguntas_guiadas": "Lista de perguntas que guiam a investigação dos alunos. O formato de lista é preferencial.",
-          "elementos_descobertos": "Lista de conceitos ou elementos que os alunos devem descobrir na investigação. O formato de lista é preferencial."
+          "perguntas_guiadas": ["Lista de perguntas que guiam a investigação dos alunos."],
+          "elementos_descobertos": ["Lista de conceitos ou elementos que os alunos devem descobrir na investigação."]
         },
         "solucao_pratica": {
           "titulo": "Solução Prática",
@@ -456,14 +487,14 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         "mini_projeto": {
           "titulo": "Mini-Projeto",
           "metodologia": "Metodologia do mini-projeto (Ex: Construção de modelo, Desenvolvimento de protótipo)",
-          "desafio": "Descrição do desafio final para os alunos aplicarem o que aprenderam. O formato de lista é preferencial."
+          "desafio": ["Descrição do desafio final para os alunos aplicarem o que aprenderam, em formato de lista."]
         },
         "sugestaoAulasCSV": [
-            {
-                "idAula": "ID da aula no currículo (ex: '101')",
-                "temaAula": "Tema da aula",
-                "justificativa": "Breve justificativa de por que essa aula se conecta ao tema."
-            }
+          {
+            "idAula": "ID da aula no currículo (ex: '101')",
+            "temaAula": "Tema da aula",
+            "justificativa": "Breve justificativa de por que essa aula se conecta ao tema."
+          }
         ],
         "observacoesIA": "Observações adicionais ou notas pedagógicas da IA sobre o plano de aula gerado."
       }
@@ -472,7 +503,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     `;
 
     try {
-      // CORREÇÃO AQUI: Chamando o endpoint correto para geração de plano de aula
       const response = await fetch('https://site-pd.onrender.com/gemini/generate-lesson-plan', {
         method: 'POST',
         headers: {
@@ -488,7 +518,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
       const data = await response.json();
       console.log('--- Resposta do backend ---');
-      console.log(data);
+      console.log(JSON.stringify(data, null, 2));
       console.log('--------------------------');
 
       if (data && typeof data === 'object' && 'tituloAula' in data) {
@@ -501,9 +531,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       console.error('Erro ao buscar plano de aula:', err);
       setError(err.message || 'Falha ao gerar o plano de aula. Por favor, tente novamente.');
     } finally {
-      if (demanda.trim().toUpperCase() !== "TESTE") {
-        setIsGenerating(false);
-      }
+      setIsGenerating(false);
       console.log('--- Estado após requisição ---');
       console.log('Planejamento:', planejamento);
       console.log('isGenerating:', isGenerating);
@@ -534,19 +562,26 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setEditedPlanejamento(planejamento);
     setError(null);
   };
-  
-  const renderRichText = (text: string, isList: boolean = false) => {
+
+  const renderRichText = (text: string | string[], isList: boolean = false) => {
     if (!text) return null;
 
+    let textToRender: string;
+    if (Array.isArray(text)) {
+      textToRender = text.join('\n');
+    } else {
+      textToRender = text;
+    }
+
     const imageRegex = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g;
-    const matches = [...text.matchAll(imageRegex)];
+    const matches = [...textToRender.matchAll(imageRegex)];
 
     const elements: React.ReactNode[] = [];
     let lastIndex = 0;
 
     matches.forEach(match => {
       const [fullMatch, url] = match;
-      const textBefore = text.substring(lastIndex, match.index);
+      const textBefore = textToRender.substring(lastIndex, match.index);
 
       if (textBefore) {
         textBefore.split('\n').filter(p => p.trim() !== '').forEach((p, pIndex) => {
@@ -558,7 +593,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       lastIndex = match.index + fullMatch.length;
     });
 
-    const textAfter = text.substring(lastIndex);
+    const textAfter = textToRender.substring(lastIndex);
     if (textAfter) {
       textAfter.split('\n').filter(p => p.trim() !== '').forEach((p, pIndex) => {
         elements.push(<p key={`text-after-${pIndex}`} className="text-content mb-2">{p.trim()}</p>);
@@ -568,14 +603,20 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     if (isList) {
       return (
         <ul className="text-content">
-          {elements.map((el, index) => <li key={index} className="list-item">{el}</li>)}
+          {Array.isArray(text) ? (
+            text.map((item, index) => (
+              <li key={index} className="list-item">{item}</li>
+            ))
+          ) : (
+            elements.map((el, index) => <li key={index} className="list-item">{el}</li>)
+          )}
         </ul>
       );
     }
 
     return <div className="rich-text-content">{elements}</div>;
   };
-  
+
   const renderCodeBlock = (text: string, section: keyof Planejamento, field: string) => {
     if (isEditMode) {
       return (
@@ -609,9 +650,9 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       </>
     );
   };
-  
-  const renderEditableText = (text: string | undefined, section: keyof Planejamento, field: string, isList: boolean = false) => {
-    const value = text || '';
+
+  const renderEditableText = (text: string | string[] | undefined, section: keyof Planejamento, field: string, isList: boolean = false) => {
+    const value = Array.isArray(text) ? text.join('\n') : text || '';
     if (isEditMode) {
       return (
         <textarea
@@ -622,11 +663,11 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         />
       );
     }
-    return renderRichText(value, isList);
+    return renderRichText(text || '', isList);
   };
-  
+
   const shouldBlockMainInteractions = isGenerating || isEditMode;
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -680,7 +721,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           </div>
         </div>
       )}
-      
+
       <AnimatePresence mode="wait">
         {isGenerating && (
           <motion.div
@@ -766,7 +807,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                   )}
                 </div>
               </div>
-                
+
               <AnimatePresence>
                 <motion.div
                   key="auto-mode-ui"
@@ -776,7 +817,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                   transition={{ duration: 0.3 }}
                   className="flex-col gap-4"
                 >
-                  {/* CORREÇÃO AQUI: Verificações de segurança antes de renderizar cada seção */}
                   {currentPlanejamento.ativacao && (
                     <div className="flex-col gap-2">
                       <h3 className="section-title">{currentPlanejamento.ativacao.titulo}</h3>
@@ -800,7 +840,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                     </div>
                   )}
                   <hr className="divider" />
-                  
+
                   {currentPlanejamento.investigacao && (
                     <div className="flex-col gap-2">
                       <h3 className="section-title">{currentPlanejamento.investigacao.titulo}</h3>
@@ -812,7 +852,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                     </div>
                   )}
                   <hr className="divider" />
-                  
+
                   {currentPlanejamento.solucao_pratica && (
                     <div className="flex-col gap-2">
                       <h3 className="section-title">{currentPlanejamento.solucao_pratica.titulo}</h3>
@@ -868,7 +908,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                     </>
                   )}
                 </motion.div>
-                </AnimatePresence>
+              </AnimatePresence>
             </div>
           </motion.div>
         )}
