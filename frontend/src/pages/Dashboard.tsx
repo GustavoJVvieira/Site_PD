@@ -7,9 +7,6 @@ import LessonPlanCard from './LessonPlanCard';
 import BridgeSteps from './BridgeSteps';
 import ChatSidebar from './ChatSideBar';
 
-// A importação de 'types' foi removida.
-// A interface 'Planejamento' foi integrada a este arquivo.
-
 // ===================================
 // INTERFACE INTEGRADA
 // ===================================

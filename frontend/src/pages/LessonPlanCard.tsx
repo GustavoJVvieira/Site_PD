@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, FileText, Presentation, Edit, CheckSquare } from 'lucide-react';
 import jsPDF from 'jspdf';
-// A importação do 'types' foi removida, pois as interfaces e dados agora estão neste arquivo.
+// A importação de 'types' foi removida, pois as interfaces e dados agora estão neste arquivo.
 
 // ===================================
 // INTERFACES E DADOS MOCKADOS INTEGRADOS
@@ -416,13 +416,68 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setIsEditMode(false);
     setError(null);
 
+    // ===========================================
+    // CORREÇÃO: PROMPT REVISADO PARA GARANTIR JSON
+    // ===========================================
+    const jsonPrompt = `
+      Crie um plano de aula completo seguindo a metodologia de ensino "Desenvolve" para o seguinte tema: "${demanda}".
+
+      O plano deve ser estruturado rigorosamente no formato JSON. Não inclua texto introdutório, explicações ou qualquer outro tipo de conteúdo fora do JSON. A sua resposta deve ser APENAS o objeto JSON.
+
+      O objeto JSON deve ter a seguinte estrutura:
+
+      {
+        "tituloAula": "Título claro e direto da aula",
+        "ativacao": {
+          "titulo": "Ativação",
+          "metodologia": "Metodologia a ser utilizada (Ex: Debate em grupo, Perguntas e Respostas)",
+          "pergunta_inicial": "Uma pergunta provocadora para iniciar a aula.",
+          "atividade": "Descrição da atividade inicial para ativar o conhecimento prévio dos alunos. Pode incluir listas com tópicos."
+        },
+        "problema_real": {
+          "titulo": "Problema Real",
+          "metodologia": "Metodologia a ser utilizada (Ex: Estudo de caso, Análise de cenários)",
+          "cenario": "Descrição de um cenário real ou fictício que contextualiza o problema. Pode conter links ou imagens em formato markdown.",
+          "pergunta_problema": "A pergunta central que o problema levanta.",
+          "importancia": "Explicação da relevância do problema na vida real dos alunos. Pode ser em formato de lista."
+        },
+        "investigacao": {
+          "titulo": "Investigação",
+          "metodologia": "Metodologia a ser utilizada (Ex: Pesquisa guiada, Exploração de recursos)",
+          "perguntas_guiadas": "Lista de perguntas que guiam a investigação dos alunos. O formato de lista é preferencial.",
+          "elementos_descobertos": "Lista de conceitos ou elementos que os alunos devem descobrir na investigação. O formato de lista é preferencial."
+        },
+        "solucao_pratica": {
+          "titulo": "Solução Prática",
+          "metodologia": "Metodologia a ser utilizada (Ex: Brainstorming, Prototipagem, Codificação)",
+          "descricao": "Descrição detalhada de como os alunos irão aplicar o conhecimento para criar uma solução prática. Pode incluir blocos de código markdown se for relevante."
+        },
+        "mini_projeto": {
+          "titulo": "Mini-Projeto",
+          "metodologia": "Metodologia do mini-projeto (Ex: Construção de modelo, Desenvolvimento de protótipo)",
+          "desafio": "Descrição do desafio final para os alunos aplicarem o que aprenderam. O formato de lista é preferencial."
+        },
+        "sugestaoAulasCSV": [
+            {
+                "idAula": "ID da aula no currículo (ex: '101')",
+                "temaAula": "Tema da aula",
+                "justificativa": "Breve justificativa de por que essa aula se conecta ao tema."
+            }
+        ],
+        "observacoesIA": "Observações adicionais ou notas pedagógicas da IA sobre o plano de aula gerado."
+      }
+
+      Garanta que a resposta seja um JSON válido. Não adicione nenhum outro texto além do objeto JSON.
+    `;
+    // ===========================================
+
     try {
       const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: demanda }),
+        body: JSON.stringify({ prompt: jsonPrompt }), // Envia o prompt revisado
       });
 
       if (!response.ok) {
@@ -432,17 +487,9 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
       const data = await response.json();
 
-      if (data.rawText) {
-        setError(
-          `Recebido texto puro da IA. O formato JSON esperado não foi retornado.
-          Por favor, refine seu prompt para que a IA gere um JSON válido.
-          Resposta bruta: ${data.rawText.substring(0, 500)}...`
-        );
-        setPlanejamento(null);
-      } else {
-        setPlanejamento(data);
-        setEditedPlanejamento(data);
-      }
+      // Agora o prompt é rigoroso o suficiente para garantir que a resposta seja o JSON esperado
+      setPlanejamento(data);
+      setEditedPlanejamento(data);
     } catch (err: any) {
       console.error('Erro ao buscar plano de aula:', err);
       setError(err.message || 'Falha ao gerar o plano de aula. Por favor, tente novamente.');
