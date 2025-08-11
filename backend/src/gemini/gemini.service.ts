@@ -128,11 +128,6 @@ export class GeminiService {
         const response = await result.response;
         let text = response.text().trim();
 
-        // ADICIONADO PARA DEBUG: Imprime a resposta bruta da IA
-        console.log('--- Resposta bruta da IA ---');
-        console.log(text);
-        console.log('---------------------------');
-
         const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
         let jsonString: string;
 

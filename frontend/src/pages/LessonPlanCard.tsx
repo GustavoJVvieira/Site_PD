@@ -157,14 +157,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const currentPlanejamento = isEditMode && editedPlanejamento ? editedPlanejamento : planejamento;
   const [isGeneratingSlides, setIsGeneratingSlides] = useState<boolean>(false);
 
-  // Adiciona useEffect para monitorar mudanças no planejamento
-  useEffect(() => {
-    console.log('--- Estado do planejamento atualizado ---');
-    console.log('Planejamento:', planejamento);
-    console.log('CurrentPlanejamento:', currentPlanejamento);
-    console.log('---------------------------------------');
-  }, [planejamento, currentPlanejamento]);
-
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
       setError("Não há um plano de aula para ser exportado.");
@@ -329,21 +321,15 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       }
 
       const data = await response.json();
-      console.log('--- Resposta do backend (/chat-with-lesson-plan) ---');
-      console.log(data);
-      console.log('-----------------------------------------------');
 
       if (data.rawText) {
         gerarPdfSlides(data.rawText);
       } else if (data.updatedPlan) {
         setError('Resposta contém um plano de aula, mas era esperado um texto de slides.');
-        console.warn('Resposta inesperada:', data.updatedPlan);
       } else {
         setError('Formato de resposta inválido do backend.');
-        console.error('Resposta inválida:', data);
       }
     } catch (err: any) {
-      console.error('Erro ao gerar plano de slides:', err);
       setError(err.message || 'Falha ao gerar o plano de slides. Por favor, tente novamente.');
     } finally {
       setIsGeneratingSlides(false);
@@ -517,9 +503,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       }
 
       const data = await response.json();
-      console.log('--- Resposta do backend ---');
-      console.log(JSON.stringify(data, null, 2));
-      console.log('--------------------------');
 
       if (data && typeof data === 'object' && 'tituloAula' in data) {
         setPlanejamento(data);
@@ -528,14 +511,9 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         throw new Error('Resposta do backend não contém um plano de aula válido.');
       }
     } catch (err: any) {
-      console.error('Erro ao buscar plano de aula:', err);
       setError(err.message || 'Falha ao gerar o plano de aula. Por favor, tente novamente.');
     } finally {
       setIsGenerating(false);
-      console.log('--- Estado após requisição ---');
-      console.log('Planejamento:', planejamento);
-      console.log('isGenerating:', isGenerating);
-      console.log('-----------------------------');
     }
   };
 
