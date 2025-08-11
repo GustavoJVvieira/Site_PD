@@ -1,62 +1,12 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState} from 'react';
 import type { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, FileText, Presentation, Edit, CheckSquare, XCircle, UploadCloud } from 'lucide-react';
+import { Sparkles, FileText, Presentation, Edit, CheckSquare} from 'lucide-react';
 import jsPDF from 'jspdf';
+import type { Planejamento, LessonPlanCardProps, } from './types';
+import { mockPlanejamento } from './types';
+import { processTextAndImages } from './PdfUtils';
 
-interface Planejamento {
-  tituloAula: string;
-  ativacao: {
-    titulo: string;
-    metodologia: string;
-    pergunta_inicial: string;
-    atividade: string;
-  };
-  problema_real: {
-    titulo: string;
-    metodologia: string;
-    cenario: string;
-    pergunta_problema: string;
-    importancia: string;
-  };
-  investigacao: {
-    titulo: string;
-    metodologia: string;
-    perguntas_guiadas: string;
-    elementos_descobertos: string;
-  };
-  solucao_pratica: {
-    titulo: string;
-    metodologia: string;
-    descricao: string;
-  };
-  mini_projeto: {
-    titulo: string;
-    metodologia: string;
-    desafio: string;
-  };
-  sugestaoAulasCSV?: {
-    idAula: string;
-    temaAula: string;
-    justificativa: string;
-  }[];
-  observacoesIA?: string;
-}
-
-interface LessonPlanCardProps {
-  demanda: string;
-  setDemanda: React.Dispatch<React.SetStateAction<string>>;
-  planejamento: Planejamento | null;
-  setPlanejamento: React.Dispatch<React.SetStateAction<Planejamento | null>>;
-  isGenerating: boolean;
-  setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>;
-  error: string | null;
-  setError: React.Dispatch<React.SetStateAction<string | null>>;
-  isEditMode: boolean;
-  setIsEditMode: React.Dispatch<React.SetStateAction<boolean>>;
-  editedPlanejamento: Planejamento | null;
-  setEditedPlanejamento: React.Dispatch<React.SetStateAction<Planejamento | null>>;
-}
 
 const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   demanda,
@@ -75,58 +25,11 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const lessonPlanRef = useRef<HTMLDivElement>(null);
   const currentPlanejamento = isEditMode && editedPlanejamento ? editedPlanejamento : planejamento;
 
-  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
-
-  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const files = Array.from(event.target.files).slice(0, 5);
-      setUploadedImages(files);
-      setError(null);
-    }
-  };
-
-  const processTextAndImages = (doc: jsPDF, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
-    const imageRegex = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g;
-    let currentY = y;
-    let lastIndex = 0;
-    const matches = [...text.matchAll(imageRegex)];
-
-    matches.forEach(match => {
-      const [fullMatch, url] = match;
-      const textBefore = text.substring(lastIndex, match.index);
-
-      if (textBefore) {
-        const lines = doc.splitTextToSize(textBefore, maxWidth);
-        lines.forEach((line: string) => {
-          doc.text(line, x, currentY);
-          currentY += lineHeight;
-        });
-      }
-
-      const img = new Image();
-      img.src = url;
-      img.onload = () => {
-        const imgWidth = Math.min(img.width, maxWidth);
-        const imgHeight = (img.height * imgWidth) / img.width;
-        doc.addImage(img, 'JPEG', x, currentY, imgWidth, imgHeight);
-      };
-      currentY += 5;
-      lastIndex = match.index + fullMatch.length;
-    });
-
-    const textAfter = text.substring(lastIndex);
-    if (textAfter) {
-      const lines = doc.splitTextToSize(textAfter, maxWidth);
-      lines.forEach((line: string) => {
-        doc.text(line, x, currentY);
-        currentY += lineHeight;
-      });
-    }
-
-    return currentY;
-  };
+  const [isGeneratingSlides, setIsGeneratingSlides] = useState<boolean>(false);
   
+
   const gerarPdfPadronizado = () => {
+    // ... (restante do código da função gerarPdfPadronizado permanece inalterado)
     if (!currentPlanejamento) {
       setError("Não há um plano de aula para ser exportado.");
       return;
@@ -215,173 +118,143 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     const fileName = currentPlanejamento?.tituloAula ? `${currentPlanejamento.tituloAula.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf` : 'plano_de_aula_padronizado.pdf';
     doc.save(fileName);
   };
-  
-  const processarImagem = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-      reader.readAsDataURL(file);
-    });
-  };
 
-  const gerarApresentacao = async () => {
-    if (!currentPlanejamento) {
-      setError("Não há um plano de aula para ser exportado como apresentação.");
+  const gerarPlanoDeSlides = async () => {
+    if (!planejamento) {
+      setError("Gere um plano de aula primeiro para depois gerar o plano de slides.");
       return;
     }
 
-    const doc = new jsPDF('l', 'mm', 'a4');
+    setIsGeneratingSlides(true);
+    setError(null);
+
+    const slidePrompt = `
+      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante, além de sugestões de imagens.
+
+      O tema da apresentação é: "${planejamento.tituloAula}".
+
+      Slide 1: Título e Introdução
+      Título: Dê um título impactante para o tema.
+      Imagem: Sugira uma imagem que represente visualmente o título e capte a atenção do público.
+
+      Slide 2: Conexão com o Cotidiano
+      Título e Texto: Crie um título e um parágrafo que expliquem o assunto, conectando-o de forma clara e direta com situações do dia a dia das pessoas.
+      Imagem: Proponha uma imagem que reforce a conexão entre o tema e a vida cotidiana.
+
+      Slide 3: Problema Real
+      Título e Texto: Desenvolva um título e um texto que liguem o assunto a um problema real e tangível, mostrando sua importância na prática.
+      Imagem: Sugira uma imagem que ilustre o problema apresentado.
+
+      Slide 4: Perguntas Investigativas
+      Título e Texto: Formule um título e um parágrafo introdutório para o slide.
+      Tópicos (2): Crie duas perguntas investigativas que incentivem a exploração e a curiosidade sobre o tema, levando a uma reflexão mais profunda.
+      Imagem: Escolha uma imagem que represente a ideia de investigação ou descoberta.
+
+      Slide 5: Aplicação Prática
+      Título e Texto: Crie um título e um texto que descrevam uma aplicação prática e concreta do conteúdo.
+      Imagem: Indique uma imagem que mostre a aplicação do conceito na prática.
+
+      Slide 6: Mini-Desafio
+      Título e Texto: Proponha um título e um texto para um mini-desafio rápido e prático. O objetivo é que o público possa realizar o desafio imediatamente para aplicar o que aprendeu.
+      Imagem: Selecione uma imagem que represente a ideia de um desafio ou ação.
+
+      Instruções Adicionais:
+      - Seja criativo e direto em todas as suas sugestões.
+      - As imagens devem ser sugestões de alta qualidade, que possam ser facilmente encontradas em bancos de imagens.
+      - Mantenha a linguagem clara e envolvente para todos os slides.
+      - Use o seguinte formato para a sua resposta:
+      SLIDE 1 - TÍTULO
+      [Título do Slide 1]
+      IMAGEM
+      [Descrição da imagem do Slide 1]
+      SLIDE 2 - CONEXÃO COM O COTIDIANO
+      [Título do Slide 2]
+      [Texto do Slide 2]
+      IMAGEM
+      [Descrição da imagem do Slide 2]
+      ... e assim por diante para todos os 6 slides.
+    `;
+      
+    try {
+      const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: slidePrompt }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Falha ao gerar o plano de slides.');
+      }
+
+      const data = await response.json();
+      const slidePlanText = data.rawText;
+      
+      // Gerar PDF imediatamente após receber o texto
+      gerarPdfSlides(slidePlanText);
+
+    } catch (err: any) {
+      console.error('Erro ao gerar plano de slides:', err);
+      setError(err.message || 'Falha ao gerar o plano de slides. Por favor, tente novamente.');
+    } finally {
+      setIsGeneratingSlides(false);
+    }
+  };
+
+  const gerarPdfSlides = (slidePlanText: string) => {
+    if (!slidePlanText) {
+      setError("Não há plano de slides para exportar.");
+      return;
+    }
+
+    const doc = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = doc.internal.pageSize.getWidth();
-  
+    let currentY = 20;
     const margin = 20;
+    const bodyWidth = pdfWidth - 2 * margin;
+    const h1FontSize = 16;
+    const h2FontSize = 14;
+    const pFontSize = 11;
     const lineHeight = 7;
 
-    doc.setFont('helvetica');
-
-    const imageUrls = await Promise.all(uploadedImages.map(processarImagem));
-
-    const addImageToSlide = (doc: jsPDF, imgData: string, yPosition: number, scaleFactor = 0.5) => {
-        const img = new Image();
-        img.src = imgData;
-        const imgAspectRatio = img.width / img.height;
-        const imgWidth = (pdfWidth - 2 * margin) * scaleFactor;
-        const imgHeight = imgWidth / imgAspectRatio;
-        const xPosition = margin + (pdfWidth - 2 * margin - imgWidth) / 2;
-        doc.addImage(imgData, 'JPEG', xPosition, yPosition, imgWidth, imgHeight);
-        return yPosition + imgHeight + 10;
-    };
-    
-    // Slide 1: Título e Imagem (Layout 1)
-    doc.setFontSize(24);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
-    doc.text(currentPlanejamento.tituloAula, pdfWidth / 2, 40, { align: 'center' });
-    if (imageUrls[0]) {
-      addImageToSlide(doc, imageUrls[0], 60, 0.8);
-    }
-    doc.addPage();
 
-    // Slide 2: Imagem, Título e Texto (Layout 2) - Ativação
-    let currentY = 30;
-    if (imageUrls[1]) {
-      currentY = addImageToSlide(doc, imageUrls[1], currentY, 0.4);
-    }
-    doc.setFontSize(20);
-    doc.setTextColor(50, 50, 50);
-    doc.text(currentPlanejamento.ativacao.titulo, margin, currentY);
-    currentY += 10;
-    doc.setFontSize(14);
-    doc.setTextColor(80, 80, 80);
-    currentY = processTextAndImages(doc, `**Pergunta inicial:** "${currentPlanejamento.ativacao.pergunta_inicial}"\n\n**Atividade:**\n${currentPlanejamento.ativacao.atividade}`, margin, currentY, pdfWidth - 2 * margin, lineHeight);
-    doc.addPage();
+    const slides = slidePlanText.split(/SLIDE \d/);
+    slides.shift(); // Remove o primeiro item vazio
 
-    // Slide 3: Imagem, Título e 2 Tópicos (Layout 3) - Problema Real
-    currentY = 30;
-    if (imageUrls[2]) {
-      currentY = addImageToSlide(doc, imageUrls[2], currentY, 0.4);
-    }
-    doc.setFontSize(20);
-    doc.setTextColor(50, 50, 50);
-    doc.text(currentPlanejamento.problema_real.titulo, margin, currentY);
-    currentY += 15;
-    doc.setFontSize(14);
-    doc.setTextColor(80, 80, 80);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text("Cenário:", margin, currentY);
-    doc.setFont('helvetica', 'normal');
-    currentY = processTextAndImages(doc, currentPlanejamento.problema_real.cenario, margin + 2, currentY + 7, pdfWidth - 2 * margin, lineHeight);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text("Pergunta problema:", margin, currentY);
-    doc.setFont('helvetica', 'normal');
-    currentY = processTextAndImages(doc, `"${currentPlanejamento.problema_real.pergunta_problema}"`, margin + 2, currentY + 7, pdfWidth - 2 * margin, lineHeight);
-    
-    doc.addPage();
-
-    // Slide 4: Título, 3 Tópicos (Layout 4) - Investigação
-    currentY = 30;
-    doc.setFontSize(20);
-    doc.setTextColor(50, 50, 50);
-    doc.text(currentPlanejamento.investigacao.titulo, margin, currentY);
-    currentY += 15;
-    
-    doc.setFontSize(14);
-    doc.setTextColor(80, 80, 80);
-    
-    const perguntasGuiadas = currentPlanejamento.investigacao.perguntas_guiadas.split('\n').filter(p => p.trim() !== '');
-    perguntasGuiadas.slice(0, 3).forEach((pergunta, idx) => {
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Tópico ${idx + 1}:`, margin, currentY);
-        doc.setFont('helvetica', 'normal');
-        currentY = processTextAndImages(doc, pergunta, margin + 2, currentY + 7, pdfWidth - 2 * margin, lineHeight);
-        currentY += 5;
-    });
-    doc.addPage();
-
-    // Slide 5: Texto (Layout 5) - Solução Prática
-    currentY = 30;
-    doc.setFontSize(20);
-    doc.setTextColor(50, 50, 50);
-    doc.text(currentPlanejamento.solucao_pratica.titulo, margin, currentY);
-    currentY += 15;
-    doc.setFontSize(14);
-    doc.setTextColor(80, 80, 80);
-    currentY = processTextAndImages(doc, currentPlanejamento.solucao_pratica.descricao, margin, currentY, pdfWidth - 2 * margin, lineHeight);
-    doc.addPage();
-
-    // Slide 6: Imagem, Título e Texto (Layout 6) - Mini Projeto
-    currentY = 30;
-    if (imageUrls[3]) {
-      currentY = addImageToSlide(doc, imageUrls[3], currentY, 0.5);
-    }
-    doc.setFontSize(20);
-    doc.setTextColor(50, 50, 50);
-    doc.text(currentPlanejamento.mini_projeto.titulo, margin, currentY);
-    currentY += 15;
-    doc.setFontSize(14);
-    doc.setTextColor(80, 80, 80);
-    currentY = processTextAndImages(doc, currentPlanejamento.mini_projeto.desafio, margin, currentY, pdfWidth - 2 * margin, lineHeight);
-    doc.addPage();
-
-    // Slide 7: Imagem, Título e Texto (Layout 7) - Observações (opcional)
-    if (currentPlanejamento.observacoesIA) {
-      currentY = 30;
-      if (imageUrls[4]) {
-        currentY = addImageToSlide(doc, imageUrls[4], currentY, 0.5);
+    slides.forEach((slideContent, index) => {
+      if (index > 0) {
+        doc.addPage();
+        currentY = 20;
       }
-      doc.setFontSize(20);
-      doc.setTextColor(50, 50, 50);
-      doc.text("Observações da IA", margin, currentY);
-      currentY += 15;
-      doc.setFontSize(14);
-      doc.setTextColor(80, 80, 80);
-      currentY = processTextAndImages(doc, currentPlanejamento.observacoesIA, margin, currentY, pdfWidth - 2 * margin, lineHeight);
-      doc.addPage();
-    }
-    
-    if (currentPlanejamento.sugestaoAulasCSV && currentPlanejamento.sugestaoAulasCSV.length > 0) {
-        let currentY = 30;
-        doc.setFontSize(20);
-        doc.setTextColor(50, 50, 50);
-        doc.text("Aulas do Currículo que se Adequam", margin, currentY);
-        currentY += 15;
-
-        currentPlanejamento.sugestaoAulasCSV.forEach((sugestao) => {
-            doc.setFontSize(14);
+      
+      const lines = slideContent.split('\n');
+      lines.forEach(line => {
+        if (line.trim().length > 0) {
+          if (line.includes('TÍTULO')) {
+            doc.setFontSize(h1FontSize);
             doc.setFont('helvetica', 'bold');
-            doc.text(`Aula ${sugestao.idAula}:`, margin, currentY);
+            doc.text(`SLIDE ${index + 1} - ${line.replace('- TÍTULO', '').trim()}`, margin, currentY);
+            currentY += lineHeight * 1.5;
             doc.setFont('helvetica', 'normal');
-            doc.text(`${sugestao.temaAula}`, margin + 20, currentY);
-            currentY += 7;
-            
-            doc.setFontSize(11);
-            doc.text(`Justificativa: ${sugestao.justificativa}`, margin, currentY);
-            currentY += 10;
-        });
-    }
+          } else if (line.includes('IMAGEM')) {
+            doc.setFontSize(h2FontSize);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Sugestão de Imagem:', margin, currentY);
+            currentY += lineHeight;
+          } else {
+            const wrappedText = doc.splitTextToSize(line, bodyWidth);
+            doc.setFontSize(pFontSize);
+            doc.setFont('helvetica', 'normal');
+            doc.text(wrappedText, margin, currentY);
+            currentY += wrappedText.length * lineHeight;
+          }
+        }
+      });
+    });
 
-    const fileName = currentPlanejamento?.tituloAula ? `${currentPlanejamento.tituloAula.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_apresentacao.pdf` : 'plano_de_aula_apresentacao.pdf';
+    const fileName = `plano_de_slides_${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'gerado'}.pdf`;
     doc.save(fileName);
   };
 
@@ -414,6 +287,14 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       setError('Por favor, descreva o tema ou conteúdo da aula.');
       return;
     }
+    
+    if (demanda.trim().toUpperCase() === "TESTE") {
+        setPlanejamento(mockPlanejamento);
+        setEditedPlanejamento(mockPlanejamento);
+        setIsGenerating(false);
+        setError(null);
+        return;
+    }
 
     setIsGenerating(true);
     setPlanejamento(null);
@@ -422,7 +303,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('https://site-pd.onrender.com/gemini/generate-lesson-plan', {
+      const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -481,7 +362,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setEditedPlanejamento(planejamento);
     setError(null);
   };
-
+  
   const renderRichText = (text: string, isList: boolean = false) => {
     if (!text) return null;
 
@@ -522,7 +403,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
     return <div className="rich-text-content">{elements}</div>;
   };
-
+  
   const renderCodeBlock = (text: string, section: keyof Planejamento, field: string) => {
     if (isEditMode) {
       return (
@@ -556,7 +437,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       </>
     );
   };
-
+  
   const renderEditableText = (text: string | undefined, section: keyof Planejamento, field: string, isList: boolean = false) => {
     const value = text || '';
     if (isEditMode) {
@@ -564,16 +445,16 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         <textarea
           className="editable-textarea"
           value={value}
-          onChange={(e) => handlePlanejamentoChange(e, section, field)}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handlePlanejamentoChange(e, section, field)}
           rows={Math.max(3, value.split('\n').length + 2)}
         />
       );
     }
     return renderRichText(value, isList);
   };
-
+  
   const shouldBlockMainInteractions = isGenerating || isEditMode;
-
+  
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -593,22 +474,12 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           <div className="flex-col gap-4">
             <div className="textarea-container">
               <textarea
-                placeholder="Ex: Ensinar o conceito de modais em Bootstrap para iniciantes..."
+                placeholder="Ex: Ensinar o conceito de modais em Bootstrap para iniciantes... (Ou digite 'TESTE' para carregar os dados de exemplo)"
                 value={demanda}
                 onChange={(e) => setDemanda(e.target.value)}
                 className="textarea"
                 disabled={shouldBlockMainInteractions}
               />
-            </div>
-            <div className="flex items-center gap-2 mt-4">
-                <label className="flex items-center justify-center gap-2 p-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <UploadCloud size={16} />
-                    Carregar Imagens
-                    <input type="file" multiple onChange={handleImageUpload} className="hidden" accept="image/*" />
-                </label>
-                {uploadedImages.length > 0 && (
-                    <span className="text-sm text-gray-500">{uploadedImages.length} imagem(ns) carregada(s)</span>
-                )}
             </div>
             <div className="button-container">
               <button
@@ -637,7 +508,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           </div>
         </div>
       )}
-
+      
       <AnimatePresence mode="wait">
         {isGenerating && (
           <motion.div
@@ -681,18 +552,27 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                     <FileText style={{ width: '16px', height: '16px', marginRight: '4px' }} /> PDF
                   </button>
                   <button
-                    onClick={gerarApresentacao}
-                    className="save-button"
-                    disabled={!planejamento || isEditMode}
-                    title="Exportar como Apresentação"
+                    onClick={gerarPlanoDeSlides}
+                    className="edit-button"
+                    title="Gerar e Exportar Plano de Slides"
+                    disabled={!planejamento || isEditMode || isGeneratingSlides}
                   >
-                    <Presentation style={{ width: '16px', height: '16px', marginRight: '4px' }} /> Apresentação
+                    {isGeneratingSlides ? (
+                      <>
+                        <div className="spinner-circle-small"></div> Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <Presentation style={{ width: '16px', height: '16px', marginRight: '4px' }} />
+                        Gerar Plano de Slides
+                      </>
+                    )}
                   </button>
                   {!isEditMode ? (
                     <button
                       onClick={toggleEditMode}
                       className="edit-button"
-                      disabled={!planejamento}
+                      disabled={!planejamento || isGeneratingSlides}
                     >
                       <Edit style={{ width: '16px', height: '16px', marginRight: '4px' }} /> Editar
                     </button>
@@ -708,90 +588,100 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                         onClick={cancelEditMode}
                         className="cancel-edit-button"
                       >
-                        <XCircle style={{ width: '16px', height: '16px', marginRight: '4px' }} /> Cancelar
+                        Cancelar
                       </button>
                     </>
                   )}
                 </div>
               </div>
-              <div className="flex-col gap-4">
-                <div className="flex-col gap-2">
-                  <h3 className="section-title">{currentPlanejamento.ativacao.titulo}</h3>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.ativacao.metodologia}</p>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Pergunta inicial:</span> "{currentPlanejamento.ativacao.pergunta_inicial}"</p>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Atividade:</span></p>
-                  {renderEditableText(currentPlanejamento.ativacao.atividade, 'ativacao', 'atividade', true)}
-                </div>
-                <hr className="divider" />
-                <div className="flex-col gap-2">
-                  <h3 className="section-title">{currentPlanejamento.problema_real.titulo}</h3>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.problema_real.metodologia}</p>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Cenário:</span></p>
-                  {renderEditableText(currentPlanejamento.problema_real.cenario, 'problema_real', 'cenario')}
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Pergunta problema:</span> "{currentPlanejamento.problema_real.pergunta_problema}"</p>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Importância:</span></p>
-                  {renderEditableText(currentPlanejamento.problema_real.importancia, 'problema_real', 'importancia', true)}
-                </div>
-                <hr className="divider" />
-                <div className="flex-col gap-2">
-                  <h3 className="section-title">{currentPlanejamento.investigacao.titulo}</h3>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.investigacao.metodologia}</p>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Perguntas guiadas:</span></p>
-                  {renderEditableText(currentPlanejamento.investigacao.perguntas_guiadas, 'investigacao', 'perguntas_guiadas', true)}
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Elementos descobertos:</span></p>
-                  {renderEditableText(currentPlanejamento.investigacao.elementos_descobertos, 'investigacao', 'elementos_descobertos', true)}
-                </div>
-                <hr className="divider" />
-                <div className="flex-col gap-2">
-                  <h3 className="section-title">{currentPlanejamento.solucao_pratica.titulo}</h3>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.solucao_pratica.metodologia}</p>
-                  {renderCodeBlock(currentPlanejamento.solucao_pratica.descricao, 'solucao_pratica', 'descricao')}
-                </div>
-                <hr className="divider" />
-                <div className="flex-col gap-2">
-                  <h3 className="section-title">{currentPlanejamento.mini_projeto.titulo}</h3>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.mini_projeto.metodologia}</p>
-                  <p className="text-content"><span style={{ fontWeight: 600 }}>Desafio:</span></p>
-                  {renderEditableText(currentPlanejamento.mini_projeto.desafio, 'mini_projeto', 'desafio', true)}
-                </div>
+                
+              <AnimatePresence>
+                <motion.div
+                  key="auto-mode-ui"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex-col gap-4"
+                >
+                  <div className="flex-col gap-2">
+                    <h3 className="section-title">{currentPlanejamento.ativacao.titulo}</h3>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.ativacao.metodologia}</p>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Pergunta inicial:</span> "{currentPlanejamento.ativacao.pergunta_inicial}"</p>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Atividade:</span></p>
+                    {renderEditableText(currentPlanejamento.ativacao.atividade, 'ativacao', 'atividade', true)}
+                  </div>
+                  <hr className="divider" />
+                  <div className="flex-col gap-2">
+                    <h3 className="section-title">{currentPlanejamento.problema_real.titulo}</h3>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.problema_real.metodologia}</p>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Cenário:</span></p>
+                    {renderEditableText(currentPlanejamento.problema_real.cenario, 'problema_real', 'cenario')}
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Pergunta problema:</span> "{currentPlanejamento.problema_real.pergunta_problema}"</p>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Importância:</span></p>
+                    {renderEditableText(currentPlanejamento.problema_real.importancia, 'problema_real', 'importancia', true)}
+                  </div>
+                  <hr className="divider" />
+                  <div className="flex-col gap-2">
+                    <h3 className="section-title">{currentPlanejamento.investigacao.titulo}</h3>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.investigacao.metodologia}</p>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Perguntas guiadas:</span></p>
+                    {renderEditableText(currentPlanejamento.investigacao.perguntas_guiadas, 'investigacao', 'perguntas_guiadas', true)}
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Elementos descobertos:</span></p>
+                    {renderEditableText(currentPlanejamento.investigacao.elementos_descobertos, 'investigacao', 'elementos_descobertos', true)}
+                  </div>
+                  <hr className="divider" />
+                  <div className="flex-col gap-2">
+                    <h3 className="section-title">{currentPlanejamento.solucao_pratica.titulo}</h3>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.solucao_pratica.metodologia}</p>
+                    {renderCodeBlock(currentPlanejamento.solucao_pratica.descricao, 'solucao_pratica', 'descricao')}
+                  </div>
+                  <hr className="divider" />
+                  <div className="flex-col gap-2">
+                    <h3 className="section-title">{currentPlanejamento.mini_projeto.titulo}</h3>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.mini_projeto.metodologia}</p>
+                    <p className="text-content"><span style={{ fontWeight: 600 }}>Desafio:</span></p>
+                    {renderEditableText(currentPlanejamento.mini_projeto.desafio, 'mini_projeto', 'desafio', true)}
+                  </div>
 
-                {currentPlanejamento.sugestaoAulasCSV && currentPlanejamento.sugestaoAulasCSV.length > 0 && (
-                  <>
-                    <hr className="divider" />
-                    <div className="flex-col gap-2">
-                      <h3 className="section-title" style={{ color: '#6b46c1' }}>Aulas do Currículo que se Adequam</h3>
-                      <ul className="text-content">
-                        {currentPlanejamento.sugestaoAulasCSV.map((sugestao, idx) => (
-                          <li key={idx} className="list-item">
-                            <span style={{ fontWeight: 600 }}>Aula {sugestao.idAula}:</span> {sugestao.temaAula}
-                            <br />
-                            <span style={{ fontSize: '0.9em', color: '#555' }}>Justificativa: {sugestao.justificativa}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </>
-                )}
+                  {currentPlanejamento.sugestaoAulasCSV && currentPlanejamento.sugestaoAulasCSV.length > 0 && (
+                    <>
+                      <hr className="divider" />
+                      <div className="flex-col gap-2">
+                        <h3 className="section-title" style={{ color: '#6b46c1' }}>Aulas do Currículo que se Adequam</h3>
+                        <ul className="text-content">
+                          {currentPlanejamento.sugestaoAulasCSV.map((sugestao, idx) => (
+                            <li key={idx} className="list-item">
+                              <span style={{ fontWeight: 600 }}>Aula {sugestao.idAula}:</span> {sugestao.temaAula}
+                              <br />
+                              <span style={{ fontSize: '0.9em', color: '#555' }}>Justificativa: {sugestao.justificativa}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
+                  )}
 
-                {currentPlanejamento.observacoesIA && (
-                  <>
-                    <hr className="divider" />
-                    <div className="flex-col gap-2">
-                      <h3 className="section-title" style={{ color: '#6b46c1' }}>Observações da IA</h3>
-                      {isEditMode ? (
-                        <textarea
-                          className="editable-textarea"
-                          value={currentPlanejamento.observacoesIA}
-                          onChange={(e) => handlePlanejamentoChange(e, 'observacoesIA')}
-                          rows={Math.max(3, currentPlanejamento.observacoesIA.split('\n').length + 2)}
-                        />
-                      ) : (
-                        <p className="text-content">{currentPlanejamento.observacoesIA}</p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+                  {currentPlanejamento.observacoesIA && (
+                    <>
+                      <hr className="divider" />
+                      <div className="flex-col gap-2">
+                        <h3 className="section-title" style={{ color: '#6b46c1' }}>Observações da IA</h3>
+                        {isEditMode ? (
+                          <textarea
+                            className="editable-textarea"
+                            value={currentPlanejamento.observacoesIA}
+                            onChange={(e) => handlePlanejamentoChange(e, 'observacoesIA')}
+                            rows={Math.max(3, currentPlanejamento.observacoesIA.split('\n').length + 2)}
+                          />
+                        ) : (
+                          <p className="text-content">{currentPlanejamento.observacoesIA}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+                </AnimatePresence>
             </div>
           </motion.div>
         )}

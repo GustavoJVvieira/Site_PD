@@ -29,4 +29,5 @@ export interface Planejamento {
     metodologia: string;
     desafio: string;
   };
+    observacoesIA:string;
 }
