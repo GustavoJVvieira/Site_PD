@@ -1,9 +1,9 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
-// import { CsvService } from '../csv/csv.service'; // REMOVA OU COMENTE ESTA LINHA
-import { AulaCurriculoService } from '../aula-curriculo/aula-curriculo.service'; // IMPORTE O NOVO SERVIÇO
-import { AulaCurriculoEntity } from '../aula-curriculo/aula-curriculo.entity'; // Importe a entidade para tipagem
+// import { CsvService } from '../csv/csv.service';
+import { AulaCurriculoService } from '../aula-curriculo/aula-curriculo.service';
+import { AulaCurriculoEntity } from '../aula-curriculo/aula-curriculo.entity';
 
 // Interface para o plano de aula
 interface Planejamento {
@@ -50,17 +50,19 @@ export class GeminiService {
   private readonly genAI: GoogleGenerativeAI;
   private readonly logger = new Logger(GeminiService.name);
 
+  // ALTERAÇÃO: Priorizando o modelo 'pro' que é mais confiável para formatação
   private readonly model_priority = [
+   "gemini-2.5-pro",
+    "gemini-1.5-pro-latest",
     "gemini-1.5-pro-latest", // Preferência por modelos mais recentes e poderosos
     "gemini-1.5-pro",
     "gemini-1.5-flash-latest",
     "gemini-1.5-flash",
-    "gemini-1.0-pro",
   ];
 
   constructor(
     private configService: ConfigService,
-    private aulaCurriculoService: AulaCurriculoService, // Injete o novo serviço
+    private aulaCurriculoService: AulaCurriculoService,
   ) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
@@ -73,11 +75,9 @@ export class GeminiService {
   async generateLessonPlan(prompt: string): Promise<Planejamento> {
     let lastError: any = null;
 
-    // BUSCA AS AULAS DO BANCO DE DADOS
     const aulasCurriculoEntities: AulaCurriculoEntity[] = await this.aulaCurriculoService.findAllAulas();
     const aulasCurriculoContext = this.aulaCurriculoService.formatAulasForPrompt(aulasCurriculoEntities);
 
-    // Construa o prompt completo com o contexto do currículo do DB
     const fullPromptWithCurriculumContext = `
       Você é um especialista em design instrucional, atuando como autor de conteúdo para estudantes do ensino médio, técnico ou profissionalizante.
       Sua missão é transformar a demanda do professor (Tema: "${prompt}") em um conteúdo didático completo com base no método BRIDGE, falando diretamente COM O ESTUDANTE.
@@ -88,14 +88,14 @@ export class GeminiService {
       ---
 
       Com base na demanda do professor (Tema: "${prompt}") e nas aulas do currículo acima, faça o seguinte:
-      1.  Gere o conteúdo didático completo usando o método BRIDGE, falando diretamente COM O ESTUDANTE, com linguagem clara, engajante e motivadora.
-      2.  **IDENTIFIQUE A(S) AULA(S) DO "CURRÍCULO EXISTENTE" QUE MAIS SE ADEQUA(M) OU COMPLEMENTA(M) O TEMA PROPOSTO PELO PROFESSOR.**
+      1. Gere o conteúdo didático completo usando o método BRIDGE, falando diretamente COM O ESTUDANTE, com linguagem clara, engajante e motivadora.
+      2. **IDENTIFIQUE A(S) AULA(S) DO "CURRÍCULO EXISTENTE" QUE MAIS SE ADEQUA(M) OU COMPLEMENTA(M) O TEMA PROPOSTO PELO PROFESSOR.**
           Para cada aula sugerida, preencha o array "sugestaoAulasCSV" com objetos contendo:
           - "idAula": O ID exato da aula do currículo (ex: "Aula 01", "Aula 45").
           - "temaAula": O tema exato da aula do currículo (ex: "O que é lógica de programação?").
           - "justificativa": Uma justificativa clara e concisa (1-2 frases) do porquê essa aula se adequa ou complementa o tema.
           **Priorize a identificação de pelo menos uma aula que se encaixe.** Se não houver nenhuma, retorne um array vazio \`[]\`.
-      3.  No campo "observacoesIA", forneça uma observação geral sobre o plano gerado em relação ao currículo. Se o currículo fornecido estava vazio ou incompleto (ex: apenas IDs e temas, sem detalhes ricos), mencione isso aqui.
+      3. No campo "observacoesIA", forneça uma observação geral sobre o plano gerado em relação ao currículo. Se o currículo fornecido estava vazio ou incompleto (ex: apenas IDs e temas, sem detalhes ricos), mencione isso aqui.
 
       Detalhes para a geração de cada momento do método BRIDGE, falando diretamente COM O ESTUDANTE, com linguagem clara, engajante e motivadora:
       - **Ativação (Bridge):** Crie uma pergunta inicial e uma atividade que conecte o tema ao conhecimento prévio do estudante. O objetivo é despertar a curiosidade.
@@ -107,20 +107,9 @@ export class GeminiService {
       ---
       **INSTRUÇÃO FINAL E CRÍTICA:**
       SUA RESPOSTA DEVE SER APENAS O OBJETO JSON VÁLIDO.
-      NÃO INCLUA TEXTO INTRODUTÓRIO COMO "CLARO, AQUI ESTÁ..." OU "PLANOS DE AULA:", NEM INCLUA OS MARCADORES \`\`\`JSON\`\`\` OU \`\`\` OU QUALQUER OUTRO TEXTO.
-      O ÚNICO CONTEÚDO DA RESPOSTA DEVE SER O OBJETO JSON.
-
-      Exemplo do formato JSON que você deve retornar (exatamente este formato, sem os marcadores \`\`\`):
-      {
-        "tituloAula": "string",
-        "ativacao": { "titulo": "string", "metodologia": "string", "pergunta_inicial": "string", "atividade": "string" },
-        "problema_real": { "titulo": "string", "metodologia": "string", "cenario": "string", "pergunta_problema": "string", "importancia": "string" },
-        "investigacao": { "titulo": "string", "metodologia": "string", "perguntas_guiadas": "string", "elementos_descobertos": "string" },
-        "solucao_pratica": { "titulo": "string", "metodologia": "string", "descricao": "string" },
-        "mini_projeto": { "titulo": "string", "metodologia": "string", "desafio": "string" },
-        "sugestaoAulasCSV": [ { "idAula": "string", "temaAula": "string", "justificativa": "string" } ],
-        "observacoesIA": "string"
-      }
+      POR FAVOR, ENVOLVA O JSON DENTRO DE UM BLOCO DE CÓDIGO MARKDOWN (\`\`\`json...\`\`\`).
+      NÃO INCLUA NENHUM OUTRO TEXTO OU EXPLICAÇÃO ADICIONAL ANTES OU DEPOIS DO BLOCO DE CÓDIGO.
+      APENAS O BLOCO DE CÓDIGO COM O JSON.
     `.trim();
 
     for (const modelName of this.model_priority) {
@@ -141,22 +130,25 @@ export class GeminiService {
         const response = await result.response;
         let text = response.text().trim();
 
-        // Limpeza preventiva de possíveis marcadores de código
-        if (text.startsWith('```json') && text.endsWith('```')) {
-          text = text.substring('```json'.length, text.length - '```'.length).trim();
-          this.logger.debug(`Removidos marcadores \`\`\`json do texto da IA (modelo: ${modelName}).`);
-        } else if (text.startsWith('```') && text.endsWith('```')) {
-          text = text.substring('```'.length, text.length - '```'.length).trim();
-          this.logger.debug(`Removidos marcadores \`\`\` do texto da IA (modelo: ${modelName}).`);
+        // NOVO: Usando uma regex para extrair o JSON de forma robusta
+        const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+        let jsonString: string;
+
+        if (jsonMatch && jsonMatch[1]) {
+          jsonString = jsonMatch[1].trim();
+          this.logger.debug(`JSON extraído com sucesso do bloco de código. (modelo: ${modelName})`);
+        } else {
+          // Fallback para caso não haja o bloco de código, mas o texto seja JSON
+          jsonString = text;
+          this.logger.debug(`Não foi encontrado um bloco de código. Tentando parsear o texto completo. (modelo: ${modelName})`);
         }
 
-        const parsedResponse: Planejamento = JSON.parse(text);
+        const parsedResponse: Planejamento = JSON.parse(jsonString);
         this.logger.log(`Conteúdo gerado com sucesso pelo modelo: ${modelName}`);
         return parsedResponse;
 
       } catch (error: any) {
         lastError = error;
-        // CORREÇÃO: Verifique se 'input' existe no objeto 'error' antes de acessá-lo
         if (error instanceof SyntaxError && 'input' in error) {
           this.logger.error(`Erro de JSON.parse no modelo ${modelName}. Resposta bruta da IA: \n---\n${error.input}\n---`);
         }
@@ -173,8 +165,6 @@ export class GeminiService {
     throw new InternalServerErrorException('Falha ao gerar o plano de aula da IA após múltiplas tentativas. Verifique os logs para mais detalhes.');
   }
 
-  // O código do método chatWithLessonPlan não precisa de alteração
-  // A lógica de fallback para 'rawText' já é robusta para esse caso
   async chatWithLessonPlan(prompt: string): Promise<{ updatedPlan?: Planejamento; rawText?: string }> {
     let lastError: any = null;
 
@@ -193,18 +183,20 @@ export class GeminiService {
           ],
         });
         const response = await result.response;
-        let text = response.text();
+        let text = response.text().trim();
 
-        if (text.startsWith('```json') && text.endsWith('```')) {
-          text = text.substring('```json'.length, text.length - '```'.length).trim();
-          this.logger.debug(`Removidos marcadores \`\`\`json do texto da IA (chat, modelo: ${modelName}).`);
-        } else if (text.startsWith('```') && text.endsWith('```')) {
-          text = text.substring('```'.length, text.length - '```'.length).trim();
-          this.logger.debug(`Removidos marcadores \`\`\` do texto da IA (chat, modelo: ${modelName}).`);
+        // NOVO: Usando uma regex para extrair o JSON de forma robusta
+        const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+        let jsonString: string;
+
+        if (jsonMatch && jsonMatch[1]) {
+          jsonString = jsonMatch[1].trim();
+        } else {
+          jsonString = text;
         }
 
         try {
-          const parsedJson = JSON.parse(text);
+          const parsedJson = JSON.parse(jsonString);
           if (
             typeof parsedJson === 'object' && parsedJson !== null &&
             'tituloAula' in parsedJson && 'ativacao' in parsedJson &&
