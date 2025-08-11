@@ -5,7 +5,7 @@ import { Sparkles, FileText, Presentation, Edit, CheckSquare} from 'lucide-react
 import jsPDF from 'jspdf';
 import type { Planejamento, LessonPlanCardProps, } from './types';
 import { mockPlanejamento } from './types';
-import { processTextAndImages } from './PdfUtils';
+
 
 
 const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
@@ -39,7 +39,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     const pdfWidth = doc.internal.pageSize.getWidth();
     let currentY = 20;
     const margin = 20;
-    const bodyWidth = pdfWidth - 2 * margin;
     const h1FontSize = 16;
     const h2FontSize = 14;
     const pFontSize = 11;
@@ -94,9 +93,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           doc.text(`${field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}:`, margin, currentY);
           currentY += lineHeight * 0.7;
 
-          doc.setFont('helvetica', 'normal');
-          currentY = processTextAndImages(doc, fieldText, margin, currentY, bodyWidth, lineHeight);
-          currentY += lineHeight * 0.5;
         }
       });
       currentY += lineHeight;
@@ -107,11 +103,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       doc.setFontSize(h2FontSize);
       doc.setTextColor(50, 50, 50);
       doc.text('Observações da IA', margin, currentY);
-      currentY += lineHeight;
-
-      doc.setFontSize(pFontSize);
-      doc.setTextColor(80, 80, 80);
-      currentY = processTextAndImages(doc, currentPlanejamento.observacoesIA, margin, currentY, bodyWidth, lineHeight);
       currentY += lineHeight;
     }
 

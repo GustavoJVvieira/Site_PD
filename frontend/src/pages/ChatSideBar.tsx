@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {  Send, ArrowLeft } from 'lucide-react';
-import type { Planejamento } from '../types/planejamento'; 
+import type { Planejamento } from './types'; 
 import './ChatSideBar.css';
 
 interface ChatSidebarProps {
