@@ -3,11 +3,7 @@ import type { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, FileText, Presentation, Edit, CheckSquare } from 'lucide-react';
 import jsPDF from 'jspdf';
-// A importação de 'types' foi removida, pois as interfaces e dados agora estão neste arquivo.
 
-// ===================================
-// INTERFACES E DADOS MOCKADOS INTEGRADOS
-// ===================================
 export interface Planejamento {
   tituloAula: string;
   ativacao: {
@@ -132,9 +128,6 @@ export const mockPlanejamento: Planejamento = {
   ],
   observacoesIA: "O plano de aula foi gerado com foco em uma abordagem prática, conectando conceitos abstratos de IA a um problema cotidiano. As metodologias sugeridas visam o engajamento e o trabalho em equipe.",
 };
-// ===================================
-// FIM DAS INTERFACES E MOCKADOS INTEGRADOS
-// ===================================
 
 const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   demanda,
@@ -416,9 +409,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setIsEditMode(false);
     setError(null);
 
-    // ===========================================
-    // CORREÇÃO: PROMPT REVISADO PARA GARANTIR JSON
-    // ===========================================
     const jsonPrompt = `
       Crie um plano de aula completo seguindo a metodologia de ensino "Desenvolve" para o seguinte tema: "${demanda}".
 
@@ -469,7 +459,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
       Garanta que a resposta seja um JSON válido. Não adicione nenhum outro texto além do objeto JSON.
     `;
-    // ===========================================
 
     try {
       const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
@@ -477,7 +466,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: jsonPrompt }), // Envia o prompt revisado
+        body: JSON.stringify({ prompt: jsonPrompt }),
       });
 
       if (!response.ok) {
@@ -486,8 +475,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       }
 
       const data = await response.json();
-
-      // Agora o prompt é rigoroso o suficiente para garantir que a resposta seja o JSON esperado
       setPlanejamento(data);
       setEditedPlanejamento(data);
     } catch (err: any) {
@@ -765,45 +752,60 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                   transition={{ duration: 0.3 }}
                   className="flex-col gap-4"
                 >
-                  <div className="flex-col gap-2">
-                    <h3 className="section-title">{currentPlanejamento.ativacao.titulo}</h3>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.ativacao.metodologia}</p>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Pergunta inicial:</span> "{currentPlanejamento.ativacao.pergunta_inicial}"</p>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Atividade:</span></p>
-                    {renderEditableText(currentPlanejamento.ativacao.atividade, 'ativacao', 'atividade', true)}
-                  </div>
+                  {/* CORREÇÃO AQUI: Verificações de segurança antes de renderizar cada seção */}
+                  {currentPlanejamento.ativacao && (
+                    <div className="flex-col gap-2">
+                      <h3 className="section-title">{currentPlanejamento.ativacao.titulo}</h3>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.ativacao.metodologia}</p>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Pergunta inicial:</span> "{currentPlanejamento.ativacao.pergunta_inicial}"</p>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Atividade:</span></p>
+                      {renderEditableText(currentPlanejamento.ativacao.atividade, 'ativacao', 'atividade', true)}
+                    </div>
+                  )}
                   <hr className="divider" />
-                  <div className="flex-col gap-2">
-                    <h3 className="section-title">{currentPlanejamento.problema_real.titulo}</h3>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.problema_real.metodologia}</p>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Cenário:</span></p>
-                    {renderEditableText(currentPlanejamento.problema_real.cenario, 'problema_real', 'cenario')}
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Pergunta problema:</span> "{currentPlanejamento.problema_real.pergunta_problema}"</p>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Importância:</span></p>
-                    {renderEditableText(currentPlanejamento.problema_real.importancia, 'problema_real', 'importancia', true)}
-                  </div>
+
+                  {currentPlanejamento.problema_real && (
+                    <div className="flex-col gap-2">
+                      <h3 className="section-title">{currentPlanejamento.problema_real.titulo}</h3>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.problema_real.metodologia}</p>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Cenário:</span></p>
+                      {renderEditableText(currentPlanejamento.problema_real.cenario, 'problema_real', 'cenario')}
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Pergunta problema:</span> "{currentPlanejamento.problema_real.pergunta_problema}"</p>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Importância:</span></p>
+                      {renderEditableText(currentPlanejamento.problema_real.importancia, 'problema_real', 'importancia', true)}
+                    </div>
+                  )}
                   <hr className="divider" />
-                  <div className="flex-col gap-2">
-                    <h3 className="section-title">{currentPlanejamento.investigacao.titulo}</h3>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.investigacao.metodologia}</p>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Perguntas guiadas:</span></p>
-                    {renderEditableText(currentPlanejamento.investigacao.perguntas_guiadas, 'investigacao', 'perguntas_guiadas', true)}
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Elementos descobertos:</span></p>
-                    {renderEditableText(currentPlanejamento.investigacao.elementos_descobertos, 'investigacao', 'elementos_descobertos', true)}
-                  </div>
+                  
+                  {currentPlanejamento.investigacao && (
+                    <div className="flex-col gap-2">
+                      <h3 className="section-title">{currentPlanejamento.investigacao.titulo}</h3>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.investigacao.metodologia}</p>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Perguntas guiadas:</span></p>
+                      {renderEditableText(currentPlanejamento.investigacao.perguntas_guiadas, 'investigacao', 'perguntas_guiadas', true)}
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Elementos descobertos:</span></p>
+                      {renderEditableText(currentPlanejamento.investigacao.elementos_descobertos, 'investigacao', 'elementos_descobertos', true)}
+                    </div>
+                  )}
                   <hr className="divider" />
-                  <div className="flex-col gap-2">
-                    <h3 className="section-title">{currentPlanejamento.solucao_pratica.titulo}</h3>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.solucao_pratica.metodologia}</p>
-                    {renderCodeBlock(currentPlanejamento.solucao_pratica.descricao, 'solucao_pratica', 'descricao')}
-                  </div>
+                  
+                  {currentPlanejamento.solucao_pratica && (
+                    <div className="flex-col gap-2">
+                      <h3 className="section-title">{currentPlanejamento.solucao_pratica.titulo}</h3>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.solucao_pratica.metodologia}</p>
+                      {renderCodeBlock(currentPlanejamento.solucao_pratica.descricao, 'solucao_pratica', 'descricao')}
+                    </div>
+                  )}
                   <hr className="divider" />
-                  <div className="flex-col gap-2">
-                    <h3 className="section-title">{currentPlanejamento.mini_projeto.titulo}</h3>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.mini_projeto.metodologia}</p>
-                    <p className="text-content"><span style={{ fontWeight: 600 }}>Desafio:</span></p>
-                    {renderEditableText(currentPlanejamento.mini_projeto.desafio, 'mini_projeto', 'desafio', true)}
-                  </div>
+
+                  {currentPlanejamento.mini_projeto && (
+                    <div className="flex-col gap-2">
+                      <h3 className="section-title">{currentPlanejamento.mini_projeto.titulo}</h3>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Metodologia:</span> {currentPlanejamento.mini_projeto.metodologia}</p>
+                      <p className="text-content"><span style={{ fontWeight: 600 }}>Desafio:</span></p>
+                      {renderEditableText(currentPlanejamento.mini_projeto.desafio, 'mini_projeto', 'desafio', true)}
+                    </div>
+                  )}
 
                   {currentPlanejamento.sugestaoAulasCSV && currentPlanejamento.sugestaoAulasCSV.length > 0 && (
                     <>
