@@ -1,57 +1,24 @@
-import React, { useState } from 'react';
-import {  Send, ArrowLeft } from 'lucide-react';
-import type { Planejamento } from './types'; 
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, ArrowLeft } from 'lucide-react';
+// Importação dos tipos e do mock centralizado
+import type { Planejamento } from './types';
+import { mockPlanejamento } from './types';
 import './ChatSideBar.css';
 
-interface ChatSidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-  currentLessonPlan: Planejamento | null;
-  onApplyLessonPlan: (plan: Planejamento) => void;
-  onError: (message: string) => void;
-  isEditMode: boolean;
+interface ChatMessage {
+  sender: 'user' | 'ai';
+  text: string;
+  isApplying?: boolean;
 }
 
-// ===================================
-// INÍCIO DO CÓDIGO MOCADO
-// ===================================
-const MOCKED_UPDATED_PLAN: Planejamento = {
-  tituloAula: "Introdução à Programação com JavaScript - Versão Melhorada",
-  ativacao: {
-    titulo: "Ativação: O que é um 'bug' e como evitá-los?",
-    metodologia: "Tempestade de ideias digital",
-    pergunta_inicial: "Além dos bugs em jogos, onde mais podemos encontrar 'erros' no dia a dia?",
-    atividade: "Vamos usar um quadro online (como o Miro) para criar um mapa mental de 'bugs' e suas soluções."
-  },
-  problema_real: {
-    titulo: "Problema Real: Criando um App de Tarefas",
-    metodologia: "Aprendizagem baseada em problemas",
-    cenario: "A equipe de marketing precisa de uma maneira simples de gerenciar as tarefas diárias, e a solução atual com planilhas é ineficiente. Eles pedem sua ajuda para criar um aplicativo simples.",
-    pergunta_problema: "Como podemos criar um aplicativo web que permita adicionar, editar e remover tarefas de forma fácil e intuitiva, mesmo com pouca experiência em programação?",
-    importancia: "Essa é uma demanda comum em muitas empresas e um excelente primeiro passo para entender como a programação resolve problemas do dia a dia."
-  },
-  investigacao: {
-    titulo: "Investigação: Os Blocos de Construção do JavaScript",
-    metodologia: "Exploração guiada e hands-on",
-    perguntas_guiadas: "O que são variáveis? Como guardamos informações nelas? O que são funções e como elas nos ajudam a organizar o código?",
-    elementos_descobertos: "Variáveis (let, const), Tipos de Dados (string, number, boolean), Funções e Eventos do DOM."
-  },
-  solucao_pratica: {
-    titulo: "Solução Prática: O Primeiro Código",
-    metodologia: "Programação pareada",
-    descricao: "Em duplas, os alunos criarão a estrutura HTML básica e, com a ajuda do professor, vão escrever o primeiro trecho de código JavaScript para adicionar uma nova tarefa à lista, usando as variáveis e funções descobertas."
-  },
-  mini_projeto: {
-    titulo: "Mini Projeto: Finalizando o App",
-    metodologia: "Trabalho individual e apresentação",
-    desafio: "Individualmente, cada aluno irá refinar o aplicativo de tarefas, implementando as funcionalidades de 'marcar como concluída' e 'remover' uma tarefa. Ao final, cada um apresenta seu trabalho."
-  },
-  observacoesIA: "Este plano de aula foi aprimorado com uma metodologia mais interativa na etapa de ativação, visando maior engajamento dos alunos.",
-};
-const MOCKED_TEXT_RESPONSE = "A Aprendizagem Baseada em Problemas (ABP) é uma metodologia de ensino onde o aprendizado acontece através da resolução de problemas complexos e significativos.";
-// ===================================
-// FIM DO CÓDIGO MOCADO
-// ===================================
+interface ChatSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentLessonPlan: Planejamento | null;
+  onApplyLessonPlan: (plan: Planejamento) => void;
+  onError: (message: string) => void;
+  isEditMode: boolean;
+}
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isOpen,
@@ -62,11 +29,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isEditMode,
 }) => {
   const [chatInput, setChatInput] = useState<string>('');
-  const [messages, setMessages] = useState<{ sender: 'user' | 'ai'; text: string; isApplying?: boolean }[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isChatting, setIsChatting] = useState<boolean>(false);
   const [aiGeneratedPlan, setAiGeneratedPlan] = useState<Planejamento | null>(null);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = async () => {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = useCallback(async () => {
     if (!chatInput.trim() || isChatting || !currentLessonPlan) return;
 
     const userMessage = chatInput.trim();
@@ -76,30 +49,29 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     setAiGeneratedPlan(null);
 
     // ===================================
-    // LÓGICA DE MOCK DO CHAT
+    // LÓGICA DE MOCK APRIMORADA, USANDO O OBJETO IMPORTADO
     // ===================================
-    // Verifica se a mensagem do usuário é para mockar uma resposta
     if (userMessage.toUpperCase().includes("MOCK PLANO")) {
-      // Simula um tempo de resposta da IA
       await new Promise(resolve => setTimeout(resolve, 1500));
       setMessages(prev => [...prev, { sender: 'ai', text: 'Entendi! Tenho uma sugestão de plano atualizado para você:', isApplying: true }]);
-      setAiGeneratedPlan(MOCKED_UPDATED_PLAN);
+      setAiGeneratedPlan(mockPlanejamento);
       setIsChatting(false);
-      return; // Sai da função para não chamar a API real
+      return;
     }
     
+    // Removendo o mock de texto, pois o `mockPlanejamento` já está definido.
+    // O mock de texto pode ser mantido se for útil para testes específicos.
+    // Caso contrário, a lógica da API real pode lidar com isso.
     if (userMessage.toUpperCase().includes("MOCK TEXTO")) {
-      // Simula um tempo de resposta da IA
       await new Promise(resolve => setTimeout(resolve, 1500));
-      setMessages(prev => [...prev, { sender: 'ai', text: MOCKED_TEXT_RESPONSE }]);
+      setMessages(prev => [...prev, { sender: 'ai', text: "Resposta de texto simulada." }]);
       setIsChatting(false);
-      return; // Sai da função para não chamar a API real
+      return;
     }
     // ===================================
-    // FIM DA LÓGICA DE MOCK DO CHAT
+    // FIM DA LÓGICA DE MOCK APRIMORADA
     // ===================================
 
-    // Código original para chamada da API
     try {
       const prompt = `
         Com base no plano de aula atual em JSON (abaixo), responda à pergunta do usuário.
@@ -143,19 +115,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
     } catch (err: any) {
       console.error('Erro na comunicação com o chat da IA:', err);
-      setMessages(prev => [...prev, { sender: 'ai', text: `Ops! Algo deu errado: ${err.message}` }]);
+      setMessages(prev => [...prev, { sender: 'ai', text: `Ops! Algo deu errado: ${err.message || 'Falha na comunicação.'}` }]);
       onError(err.message || 'Falha ao conversar com a IA. Tente novamente.');
     } finally {
       setIsChatting(false);
     }
-  };
+  }, [chatInput, isChatting, currentLessonPlan, onError]);
 
-  const handleApplyAiPlan = () => {
+  const handleApplyAiPlan = useCallback(() => {
     if (aiGeneratedPlan) {
       onApplyLessonPlan(aiGeneratedPlan);
       setAiGeneratedPlan(null);
     }
-  };
+  }, [aiGeneratedPlan, onApplyLessonPlan]);
 
   if (!isOpen) {
     return null;
@@ -165,7 +137,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
     <div className="chat-main-view">
       <div className="chat-header">
         <h2>Chat com a IA</h2>
-        <button className="close-chat-button" onClick={onClose}>
+        <button className="close-chat-button" onClick={onClose} aria-label="Fechar chat">
           <ArrowLeft size={24} />
         </button>
       </div>
@@ -195,13 +167,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             <div className="dot-pulse"></div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
       <div className="chat-input-area">
         <textarea
           placeholder="Digite sua mensagem ou pedido..."
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          onKeyPress={(e) => {
+          onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               handleSendMessage();
@@ -209,8 +182,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           className="chat-textarea"
           disabled={isChatting || isEditMode}
+          aria-label="Entrada do chat"
         />
-        <button onClick={handleSendMessage} disabled={isChatting || !chatInput.trim() || isEditMode} className="send-button">
+        <button
+          onClick={handleSendMessage}
+          disabled={isChatting || !chatInput.trim() || isEditMode}
+          className="send-button"
+          aria-label="Enviar mensagem"
+        >
           <Send size={20} />
         </button>
       </div>
