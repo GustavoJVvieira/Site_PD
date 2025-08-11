@@ -284,6 +284,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     `;
       
     try {
+      // CORREÇÃO: Esta chamada já está correta, pois a intenção é receber texto puro
       const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -461,7 +462,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     `;
 
     try {
-      const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
+      // CORREÇÃO AQUI: Chamando o endpoint correto para geração de plano de aula
+      const response = await fetch('https://site-pd.onrender.com/gemini/generate-lesson-plan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
