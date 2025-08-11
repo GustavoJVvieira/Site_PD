@@ -156,8 +156,8 @@ export class GeminiService {
 
       } catch (error: any) {
         lastError = error;
-        // Se o erro for de JSON.parse, logue a resposta completa da IA para depuração
-        if (error instanceof SyntaxError) {
+        // CORREÇÃO: Verifique se 'input' existe no objeto 'error' antes de acessá-lo
+        if (error instanceof SyntaxError && 'input' in error) {
           this.logger.error(`Erro de JSON.parse no modelo ${modelName}. Resposta bruta da IA: \n---\n${error.input}\n---`);
         }
         this.logger.warn(`Falha ao usar o modelo ${modelName}: ${error.message}. Tentando o próximo...`);
