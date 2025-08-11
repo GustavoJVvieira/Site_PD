@@ -1,7 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
-// import { CsvService } from '../csv/csv.service';
 import { AulaCurriculoService } from '../aula-curriculo/aula-curriculo.service';
 import { AulaCurriculoEntity } from '../aula-curriculo/aula-curriculo.entity';
 
@@ -50,9 +49,8 @@ export class GeminiService {
   private readonly genAI: GoogleGenerativeAI;
   private readonly logger = new Logger(GeminiService.name);
 
-  // ALTERAÇÃO: Priorizando o modelo 'pro' que é mais confiável para formatação
   private readonly model_priority = [
-   "gemini-2.5-pro",
+    "gemini-2.5-pro",
     "gemini-1.5-pro-latest",
     "gemini-1.5-pro-latest", // Preferência por modelos mais recentes e poderosos
     "gemini-1.5-pro",
@@ -130,7 +128,11 @@ export class GeminiService {
         const response = await result.response;
         let text = response.text().trim();
 
-        // NOVO: Usando uma regex para extrair o JSON de forma robusta
+        // ADICIONADO PARA DEBUG: Imprime a resposta bruta da IA
+        console.log('--- Resposta bruta da IA ---');
+        console.log(text);
+        console.log('---------------------------');
+
         const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
         let jsonString: string;
 
@@ -138,7 +140,6 @@ export class GeminiService {
           jsonString = jsonMatch[1].trim();
           this.logger.debug(`JSON extraído com sucesso do bloco de código. (modelo: ${modelName})`);
         } else {
-          // Fallback para caso não haja o bloco de código, mas o texto seja JSON
           jsonString = text;
           this.logger.debug(`Não foi encontrado um bloco de código. Tentando parsear o texto completo. (modelo: ${modelName})`);
         }
@@ -184,8 +185,12 @@ export class GeminiService {
         });
         const response = await result.response;
         let text = response.text().trim();
+        
+        // ADICIONADO PARA DEBUG: Imprime a resposta bruta da IA
+        console.log('--- Resposta bruta da IA (Chat) ---');
+        console.log(text);
+        console.log('------------------------------------');
 
-        // NOVO: Usando uma regex para extrair o JSON de forma robusta
         const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
         let jsonString: string;
 
