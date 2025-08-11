@@ -7,8 +7,53 @@ import LessonPlanCard from './LessonPlanCard';
 import BridgeSteps from './BridgeSteps';
 import ChatSidebar from './ChatSideBar';
 
-// Importando a interface do arquivo de tipos centralizado
-import type { Planejamento } from './types';
+// A importação de 'types' foi removida.
+// A interface 'Planejamento' foi integrada a este arquivo.
+
+// ===================================
+// INTERFACE INTEGRADA
+// ===================================
+export interface Planejamento {
+  tituloAula: string;
+  ativacao: {
+    titulo: string;
+    metodologia: string;
+    pergunta_inicial: string;
+    atividade: string;
+  };
+  problema_real: {
+    titulo: string;
+    metodologia: string;
+    cenario: string;
+    pergunta_problema: string;
+    importancia: string;
+  };
+  investigacao: {
+    titulo: string;
+    metodologia: string;
+    perguntas_guiadas: string;
+    elementos_descobertos: string;
+  };
+  solucao_pratica: {
+    titulo: string;
+    metodologia: string;
+    descricao: string;
+  };
+  mini_projeto: {
+    titulo: string;
+    metodologia: string;
+    desafio: string;
+  };
+  sugestaoAulasCSV?: {
+    idAula: string;
+    temaAula: string;
+    justificativa: string;
+  }[];
+  observacoesIA?: string; 
+}
+// ===================================
+// FIM DA INTERFACE INTEGRADA
+// ===================================
 
 // Componente para lidar com a lógica e exibição do chat
 const ChatContainer: React.FC<{
