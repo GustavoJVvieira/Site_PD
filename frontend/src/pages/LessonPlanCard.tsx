@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, FileText, Presentation, Edit, CheckSquare, XCircle } from 'lucide-react';
+import { Sparkles, FileText, Presentation, Edit, CheckSquare, XCircle, UploadCloud } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 interface Planejamento {
@@ -75,6 +75,16 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const lessonPlanRef = useRef<HTMLDivElement>(null);
   const currentPlanejamento = isEditMode && editedPlanejamento ? editedPlanejamento : planejamento;
 
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+
+  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files).slice(0, 5);
+      setUploadedImages(files);
+      setError(null);
+    }
+  };
+
   const processTextAndImages = (doc: jsPDF, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
     const imageRegex = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g;
     let currentY = y;
@@ -115,7 +125,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
     return currentY;
   };
-
+  
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
       setError("Não há um plano de aula para ser exportado.");
@@ -205,8 +215,17 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     const fileName = currentPlanejamento?.tituloAula ? `${currentPlanejamento.tituloAula.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf` : 'plano_de_aula_padronizado.pdf';
     doc.save(fileName);
   };
+  
+  const processarImagem = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
 
-  const gerarApresentacao = () => {
+  const gerarApresentacao = async () => {
     if (!currentPlanejamento) {
       setError("Não há um plano de aula para ser exportado como apresentação.");
       return;
@@ -214,61 +233,160 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
     const doc = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = doc.internal.pageSize.getWidth();
-    const pdfHeight = doc.internal.pageSize.getHeight();
+  
     const margin = 20;
     const lineHeight = 7;
 
     doc.setFont('helvetica');
 
+    const imageUrls = await Promise.all(uploadedImages.map(processarImagem));
+
+    const addImageToSlide = (doc: jsPDF, imgData: string, yPosition: number, scaleFactor = 0.5) => {
+        const img = new Image();
+        img.src = imgData;
+        const imgAspectRatio = img.width / img.height;
+        const imgWidth = (pdfWidth - 2 * margin) * scaleFactor;
+        const imgHeight = imgWidth / imgAspectRatio;
+        const xPosition = margin + (pdfWidth - 2 * margin - imgWidth) / 2;
+        doc.addImage(imgData, 'JPEG', xPosition, yPosition, imgWidth, imgHeight);
+        return yPosition + imgHeight + 10;
+    };
+    
+    // Slide 1: Título e Imagem (Layout 1)
     doc.setFontSize(24);
     doc.setTextColor(0, 0, 0);
-    doc.text(currentPlanejamento.tituloAula, pdfWidth / 2, pdfHeight / 2, { align: 'center' });
+    doc.text(currentPlanejamento.tituloAula, pdfWidth / 2, 40, { align: 'center' });
+    if (imageUrls[0]) {
+      addImageToSlide(doc, imageUrls[0], 60, 0.8);
+    }
     doc.addPage();
 
-    const sectionsForPresentation = [
-      { title: currentPlanejamento.ativacao.titulo, content: currentPlanejamento.ativacao, fields: ['pergunta_inicial', 'atividade'] },
-      { title: currentPlanejamento.problema_real.titulo, content: currentPlanejamento.problema_real, fields: ['cenario', 'pergunta_problema', 'importancia'] },
-      { title: currentPlanejamento.investigacao.titulo, content: currentPlanejamento.investigacao, fields: ['perguntas_guiadas', 'elementos_descobertos'] },
-      { title: currentPlanejamento.solucao_pratica.titulo, content: currentPlanejamento.solucao_pratica, fields: ['descricao'] },
-      { title: currentPlanejamento.mini_projeto.titulo, content: currentPlanejamento.mini_projeto, fields: ['desafio'] },
-    ];
+    // Slide 2: Imagem, Título e Texto (Layout 2) - Ativação
+    let currentY = 30;
+    if (imageUrls[1]) {
+      currentY = addImageToSlide(doc, imageUrls[1], currentY, 0.4);
+    }
+    doc.setFontSize(20);
+    doc.setTextColor(50, 50, 50);
+    doc.text(currentPlanejamento.ativacao.titulo, margin, currentY);
+    currentY += 10;
+    doc.setFontSize(14);
+    doc.setTextColor(80, 80, 80);
+    currentY = processTextAndImages(doc, `**Pergunta inicial:** "${currentPlanejamento.ativacao.pergunta_inicial}"\n\n**Atividade:**\n${currentPlanejamento.ativacao.atividade}`, margin, currentY, pdfWidth - 2 * margin, lineHeight);
+    doc.addPage();
 
-    sectionsForPresentation.forEach((section, index) => {
+    // Slide 3: Imagem, Título e 2 Tópicos (Layout 3) - Problema Real
+    currentY = 30;
+    if (imageUrls[2]) {
+      currentY = addImageToSlide(doc, imageUrls[2], currentY, 0.4);
+    }
+    doc.setFontSize(20);
+    doc.setTextColor(50, 50, 50);
+    doc.text(currentPlanejamento.problema_real.titulo, margin, currentY);
+    currentY += 15;
+    doc.setFontSize(14);
+    doc.setTextColor(80, 80, 80);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text("Cenário:", margin, currentY);
+    doc.setFont('helvetica', 'normal');
+    currentY = processTextAndImages(doc, currentPlanejamento.problema_real.cenario, margin + 2, currentY + 7, pdfWidth - 2 * margin, lineHeight);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text("Pergunta problema:", margin, currentY);
+    doc.setFont('helvetica', 'normal');
+    currentY = processTextAndImages(doc, `"${currentPlanejamento.problema_real.pergunta_problema}"`, margin + 2, currentY + 7, pdfWidth - 2 * margin, lineHeight);
+    
+    doc.addPage();
+
+    // Slide 4: Título, 3 Tópicos (Layout 4) - Investigação
+    currentY = 30;
+    doc.setFontSize(20);
+    doc.setTextColor(50, 50, 50);
+    doc.text(currentPlanejamento.investigacao.titulo, margin, currentY);
+    currentY += 15;
+    
+    doc.setFontSize(14);
+    doc.setTextColor(80, 80, 80);
+    
+    const perguntasGuiadas = currentPlanejamento.investigacao.perguntas_guiadas.split('\n').filter(p => p.trim() !== '');
+    perguntasGuiadas.slice(0, 3).forEach((pergunta, idx) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Tópico ${idx + 1}:`, margin, currentY);
+        doc.setFont('helvetica', 'normal');
+        currentY = processTextAndImages(doc, pergunta, margin + 2, currentY + 7, pdfWidth - 2 * margin, lineHeight);
+        currentY += 5;
+    });
+    doc.addPage();
+
+    // Slide 5: Texto (Layout 5) - Solução Prática
+    currentY = 30;
+    doc.setFontSize(20);
+    doc.setTextColor(50, 50, 50);
+    doc.text(currentPlanejamento.solucao_pratica.titulo, margin, currentY);
+    currentY += 15;
+    doc.setFontSize(14);
+    doc.setTextColor(80, 80, 80);
+    currentY = processTextAndImages(doc, currentPlanejamento.solucao_pratica.descricao, margin, currentY, pdfWidth - 2 * margin, lineHeight);
+    doc.addPage();
+
+    // Slide 6: Imagem, Título e Texto (Layout 6) - Mini Projeto
+    currentY = 30;
+    if (imageUrls[3]) {
+      currentY = addImageToSlide(doc, imageUrls[3], currentY, 0.5);
+    }
+    doc.setFontSize(20);
+    doc.setTextColor(50, 50, 50);
+    doc.text(currentPlanejamento.mini_projeto.titulo, margin, currentY);
+    currentY += 15;
+    doc.setFontSize(14);
+    doc.setTextColor(80, 80, 80);
+    currentY = processTextAndImages(doc, currentPlanejamento.mini_projeto.desafio, margin, currentY, pdfWidth - 2 * margin, lineHeight);
+    doc.addPage();
+
+    // Slide 7: Imagem, Título e Texto (Layout 7) - Observações (opcional)
+    if (currentPlanejamento.observacoesIA) {
+      currentY = 30;
+      if (imageUrls[4]) {
+        currentY = addImageToSlide(doc, imageUrls[4], currentY, 0.5);
+      }
       doc.setFontSize(20);
       doc.setTextColor(50, 50, 50);
-      doc.text(section.title, margin, 30);
-
-      let currentY = 50;
-
+      doc.text("Observações da IA", margin, currentY);
+      currentY += 15;
       doc.setFontSize(14);
       doc.setTextColor(80, 80, 80);
+      currentY = processTextAndImages(doc, currentPlanejamento.observacoesIA, margin, currentY, pdfWidth - 2 * margin, lineHeight);
+      doc.addPage();
+    }
+    
+    if (currentPlanejamento.sugestaoAulasCSV && currentPlanejamento.sugestaoAulasCSV.length > 0) {
+        let currentY = 30;
+        doc.setFontSize(20);
+        doc.setTextColor(50, 50, 50);
+        doc.text("Aulas do Currículo que se Adequam", margin, currentY);
+        currentY += 15;
 
-      section.fields.forEach(field => {
-        const fieldText = (section.content as any)[field];
-        if (fieldText) {
-          doc.setFontSize(14);
-          doc.setFont('helvetica', 'bold');
-          doc.text(`${field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}:`, margin, currentY);
-          currentY += 8;
-
-          doc.setFont('helvetica', 'normal');
-          currentY = processTextAndImages(doc, fieldText, margin, currentY, pdfWidth - 2 * margin, lineHeight);
-          currentY += 10;
-        }
-      });
-      if (index < sectionsForPresentation.length - 1) {
-        doc.addPage();
-      }
-    });
+        currentPlanejamento.sugestaoAulasCSV.forEach((sugestao) => {
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Aula ${sugestao.idAula}:`, margin, currentY);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${sugestao.temaAula}`, margin + 20, currentY);
+            currentY += 7;
+            
+            doc.setFontSize(11);
+            doc.text(`Justificativa: ${sugestao.justificativa}`, margin, currentY);
+            currentY += 10;
+        });
+    }
 
     const fileName = currentPlanejamento?.tituloAula ? `${currentPlanejamento.tituloAula.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_apresentacao.pdf` : 'plano_de_aula_apresentacao.pdf';
     doc.save(fileName);
   };
 
-  type ChangeType<T extends HTMLElement> = ChangeEvent<T>;
-
   const handlePlanejamentoChange = (
-    e: ChangeType<HTMLTextAreaElement | HTMLInputElement>,
+    e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
     section: keyof Planejamento | 'tituloAula',
     field?: string
   ) => {
@@ -370,7 +488,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     const imageRegex = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g;
     const matches = [...text.matchAll(imageRegex)];
 
-    const elements: React.ReactNode[] = []; // Explicitly type the array
+    const elements: React.ReactNode[] = [];
     let lastIndex = 0;
 
     matches.forEach(match => {
@@ -481,6 +599,16 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                 className="textarea"
                 disabled={shouldBlockMainInteractions}
               />
+            </div>
+            <div className="flex items-center gap-2 mt-4">
+                <label className="flex items-center justify-center gap-2 p-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer transition-colors">
+                    <UploadCloud size={16} />
+                    Carregar Imagens
+                    <input type="file" multiple onChange={handleImageUpload} className="hidden" accept="image/*" />
+                </label>
+                {uploadedImages.length > 0 && (
+                    <span className="text-sm text-gray-500">{uploadedImages.length} imagem(ns) carregada(s)</span>
+                )}
             </div>
             <div className="button-container">
               <button
