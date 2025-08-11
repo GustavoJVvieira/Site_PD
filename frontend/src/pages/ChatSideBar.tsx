@@ -19,13 +19,13 @@ export interface Planejamento {
     metodologia: string;
     cenario: string;
     pergunta_problema: string;
-    importancia: string;
+    importancia: string | string[];
   };
   investigacao: {
     titulo: string;
     metodologia: string;
-    perguntas_guiadas: string;
-    elementos_descobertos: string;
+    perguntas_guiadas: string | string[];
+    elementos_descobertos: string | string[];
   };
   solucao_pratica: {
     titulo: string;
@@ -35,7 +35,7 @@ export interface Planejamento {
   mini_projeto: {
     titulo: string;
     metodologia: string;
-    desafio: string;
+    desafio: string | string[];
   };
   sugestaoAulasCSV?: {
     idAula: string;
@@ -58,16 +58,16 @@ export const mockPlanejamento: Planejamento = {
     metodologia: "Estudo de caso",
     cenario: "A prefeitura de uma cidade deseja otimizar o fluxo de trânsito em horários de pico. Eles consideraram a implementação de semáforos inteligentes, mas não sabem o impacto real disso. Vocês, como engenheiros, precisam analisar o problema.",
     pergunta_problema: "Como a Inteligência Artificial poderia ser usada para melhorar o trânsito da cidade, considerando as variáveis de fluxo, horário e eventos especiais?",
-    importancia: "Discuta como a IA pode resolver problemas complexos da vida real e a importância de analisar os dados para tomar decisões mais assertivas.",
+    importancia: ["Discuta como a IA pode resolver problemas complexos da vida real e a importância de analisar os dados para tomar decisões mais assertivas."],
   },
   investigacao: {
     titulo: "Investigação",
     metodologia: "Pesquisa guiada",
-    perguntas_guiadas: `1. Quais são os principais desafios do trânsito na cidade?
-    2. Que tipos de dados podem ser coletados para analisar o trânsito (ex: câmeras, sensores)?
-    3. Como um algoritmo de IA poderia processar esses dados para tomar decisões?
-    4. Qual a diferença entre um semáforo inteligente e um tradicional?`,
-    elementos_descobertos: "Aprendizado de máquina, visão computacional, coleta e análise de dados, otimização de algoritmos.",
+    perguntas_guiadas: [`1. Quais são os principais desafios do trânsito na cidade?`,
+    `2. Que tipos de dados podem ser coletados para analisar o trânsito (ex: câmeras, sensores)?`,
+    `3. Como um algoritmo de IA poderia processar esses dados para tomar decisões?`,
+    `4. Qual a diferença entre um semáforo inteligente e um tradicional?`],
+    elementos_descobertos: ["Aprendizado de máquina, visão computacional, coleta e análise de dados, otimização de algoritmos."],
   },
   solucao_pratica: {
     titulo: "Solução Prática",
@@ -92,7 +92,7 @@ export const mockPlanejamento: Planejamento = {
   mini_projeto: {
     titulo: "Mini-Projeto",
     metodologia: "Construção de modelo",
-    desafio: "Crie um fluxograma ou um pequeno protótipo (pode ser com blocos de programação) de como um semáforo inteligente poderia funcionar, levando em conta os dados que vocês investigaram. O objetivo é apresentar sua solução para a turma.",
+    desafio: ["Crie um fluxograma ou um pequeno protótipo (pode ser com blocos de programação) de como um semáforo inteligente poderia funcionar, levando em conta os dados que vocês investigaram. O objetivo é apresentar sua solução para a turma."],
   },
   sugestaoAulasCSV: [
     {

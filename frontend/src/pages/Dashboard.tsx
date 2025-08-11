@@ -23,13 +23,13 @@ export interface Planejamento {
     metodologia: string;
     cenario: string;
     pergunta_problema: string;
-    importancia: string;
+    importancia: string | string[];
   };
   investigacao: {
     titulo: string;
     metodologia: string;
-    perguntas_guiadas: string;
-    elementos_descobertos: string;
+    perguntas_guiadas: string | string[];
+    elementos_descobertos: string | string[];
   };
   solucao_pratica: {
     titulo: string;
@@ -39,7 +39,7 @@ export interface Planejamento {
   mini_projeto: {
     titulo: string;
     metodologia: string;
-    desafio: string;
+    desafio: string | string[];
   };
   sugestaoAulasCSV?: {
     idAula: string;
