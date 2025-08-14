@@ -268,44 +268,71 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
       Slide 1: Título e Introdução
       Título: Dê um título impactante para o tema.
-      Imagem: Sugira uma imagem que represente visualmente o título e capte a atenção do público.
 
       Slide 2: Conexão com o Cotidiano
       Título e Texto: Crie um título e um parágrafo que expliquem o assunto, conectando-o de forma clara e direta com situações do dia a dia das pessoas.
-      Imagem: Proponha uma imagem que reforce a conexão entre o tema e a vida cotidiana.
 
       Slide 3: Problema Real
       Título e Texto: Desenvolva um título e um texto que liguem o assunto a um problema real e tangível, mostrando sua importância na prática.
-      Imagem: Sugira uma imagem que ilustre o problema apresentado.
 
       Slide 4: Perguntas Investigativas
       Título e Texto: Formule um título e um parágrafo introdutório para o slide.
       Tópicos (2): Crie duas perguntas investigativas que incentivem a exploração e a curiosidade sobre o tema, levando a uma reflexão mais profunda.
-      Imagem: Escolha uma imagem que represente a ideia de investigação ou descoberta.
 
       Slide 5: Aplicação Prática
       Título e Texto: Crie um título e um texto que descrevam uma aplicação prática e concreta do conteúdo.
-      Imagem: Indique uma imagem que mostre a aplicação do conceito na prática.
 
       Slide 6: Mini-Desafio
       Título e Texto: Proponha um título e um texto para um mini-desafio rápido e prático. O objetivo é que o público possa realizar o desafio imediatamente para aplicar o que aprendeu.
-      Imagem: Selecione uma imagem que represente a ideia de um desafio ou ação.
 
       Instruções Adicionais:
       - Seja criativo e direto em todas as suas sugestões.
       - As imagens devem ser sugestões de alta qualidade, que possam ser facilmente encontradas em bancos de imagens.
       - Mantenha a linguagem clara e envolvente para todos os slides.
-      - Use o seguinte formato para a sua resposta:
-      SLIDE 1 - TÍTULO
-      [Título do Slide 1]
-      IMAGEM
-      [Descrição da imagem do Slide 1]
-      SLIDE 2 - CONEXÃO COM O COTIDIANO
-      [Título do Slide 2]
-      [Texto do Slide 2]
-      IMAGEM
-      [Descrição da imagem do Slide 2]
-      ... e assim por diante para todos os 6 slides.
+
+      A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido com a seguinte estrutura, sem qualquer texto adicional fora do JSON:
+
+      {
+        "slides": [
+          {
+            "number": 1,
+            "title": "Título impactante para o tema",
+            "text": "",
+            "image": "Sugestão de imagem de alta qualidade"
+          },
+          {
+            "number": 2,
+            "title": "Título do slide",
+            "text": "Parágrafo de texto",
+            "image": "Sugestão de imagem de alta qualidade"
+          },
+          {
+            "number": 3,
+            "title": "Título do slide",
+            "text": "Parágrafo de texto",
+            "image": "Sugestão de imagem de alta qualidade"
+          },
+          {
+            "number": 4,
+            "title": "Título do slide",
+            "intro": "Parágrafo introdutório",
+            "questions": ["Pergunta 1", "Pergunta 2"],
+            "image": "Sugestão de imagem de alta qualidade"
+          },
+          {
+            "number": 5,
+            "title": "Título do slide",
+            "text": "Parágrafo de texto",
+            "image": "Sugestão de imagem de alta qualidade"
+          },
+          {
+            "number": 6,
+            "title": "Título do slide",
+            "text": "Parágrafo de texto",
+            "image": "Sugestão de imagem de alta qualidade"
+          }
+        ]
+      }
     `;
 
     try {
@@ -323,9 +350,27 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       const data = await response.json();
 
       if (data.rawText) {
-        gerarPdfSlides(data.rawText);
-      } else if (data.updatedPlan) {
-        setError('Resposta contém um plano de aula, mas era esperado um texto de slides.');
+        const slideJson = JSON.parse(data.rawText);
+        if (slideJson.slides) {
+          // Envia o JSON para o webhook do n8n
+          const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
+          const n8nResponse = await fetch(n8nUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(slideJson),
+          });
+
+          if (n8nResponse.ok) {
+            console.log('JSON enviado com sucesso para o webhook do n8n');
+          } else {
+            console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
+          }
+
+          // Continua gerando o PDF localmente a partir do JSON
+          gerarPdfSlides(slideJson.slides);
+        } else {
+          setError('Formato de resposta inválido: slides não encontrados.');
+        }
       } else {
         setError('Formato de resposta inválido do backend.');
       }
@@ -336,8 +381,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     }
   };
 
-  const gerarPdfSlides = (slidePlanText: string) => {
-    if (!slidePlanText) {
+  const gerarPdfSlides = (slides: any[]) => {
+    if (!slides || slides.length === 0) {
       setError("Não há plano de slides para exportar.");
       return;
     }
@@ -355,38 +400,51 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
 
-    const slides = slidePlanText.split(/SLIDE \d/);
-    slides.shift(); // Remove o primeiro item vazio
-
-    slides.forEach((slideContent, index) => {
+    slides.forEach((slide, index) => {
       if (index > 0) {
         doc.addPage();
-        currentY = 20;
+      }
+      currentY = 20;
+
+      doc.setFontSize(h1FontSize);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`SLIDE ${slide.number} - ${slide.title}`, margin, currentY);
+      currentY += lineHeight * 1.5;
+      doc.setFont('helvetica', 'normal');
+
+      if (slide.text) {
+        const wrappedText = doc.splitTextToSize(slide.text, bodyWidth);
+        doc.setFontSize(pFontSize);
+        doc.text(wrappedText, margin, currentY);
+        currentY += wrappedText.length * lineHeight;
       }
 
-      const lines = slideContent.split('\n');
-      lines.forEach(line => {
-        if (line.trim().length > 0) {
-          if (line.includes('TÍTULO')) {
-            doc.setFontSize(h1FontSize);
-            doc.setFont('helvetica', 'bold');
-            doc.text(`SLIDE ${index + 1} - ${line.replace('- TÍTULO', '').trim()}`, margin, currentY);
-            currentY += lineHeight * 1.5;
-            doc.setFont('helvetica', 'normal');
-          } else if (line.includes('IMAGEM')) {
-            doc.setFontSize(h2FontSize);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Sugestão de Imagem:', margin, currentY);
-            currentY += lineHeight;
-          } else {
-            const wrappedText = doc.splitTextToSize(line, bodyWidth);
-            doc.setFontSize(pFontSize);
-            doc.setFont('helvetica', 'normal');
-            doc.text(wrappedText, margin, currentY);
-            currentY += wrappedText.length * lineHeight;
-          }
-        }
-      });
+      if (slide.intro) {
+        const wrappedIntro = doc.splitTextToSize(slide.intro, bodyWidth);
+        doc.setFontSize(pFontSize);
+        doc.text(wrappedIntro, margin, currentY);
+        currentY += wrappedIntro.length * lineHeight;
+      }
+
+      if (slide.questions) {
+        doc.setFontSize(pFontSize);
+        slide.questions.forEach((question: string) => {
+          const wrappedQuestion = doc.splitTextToSize(question, bodyWidth);
+          doc.text(wrappedQuestion, margin, currentY);
+          currentY += wrappedQuestion.length * lineHeight;
+        });
+      }
+
+      doc.setFontSize(h2FontSize);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sugestão de Imagem:', margin, currentY);
+      currentY += lineHeight;
+
+      const wrappedImage = doc.splitTextToSize(slide.image, bodyWidth);
+      doc.setFontSize(pFontSize);
+      doc.setFont('helvetica', 'normal');
+      doc.text(wrappedImage, margin, currentY);
+      currentY += wrappedImage.length * lineHeight;
     });
 
     const fileName = `plano_de_slides_${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'gerado'}.pdf`;
@@ -468,6 +526,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         "solucao_pratica": {
           "titulo": "Solução Prática",
           "metodologia": "Metodologia a ser utilizada (Ex: Brainstorming, Prototipagem, Codificação)",
+          Core Code Block
           "descricao": "Descrição detalhada de como os alunos irão aplicar o conhecimento para criar uma solução prática. Pode incluir blocos de código markdown se for relevante."
         },
         "mini_projeto": {
