@@ -43,6 +43,15 @@ export interface Planejamento {
   observacoesIA?: string;
 }
 
+export interface Slide {
+  number: number;
+  title: string;
+  text?: string;
+  intro?: string;
+  questions?: string[];
+  image: string;
+}
+
 export interface LessonPlanCardProps {
   demanda: string;
   setDemanda: React.Dispatch<React.SetStateAction<string>>;
@@ -56,13 +65,6 @@ export interface LessonPlanCardProps {
   setIsEditMode: React.Dispatch<React.SetStateAction<boolean>>;
   editedPlanejamento: Planejamento | null;
   setEditedPlanejamento: React.Dispatch<React.SetStateAction<Planejamento | null>>;
-}
-
-export interface ManualSlide {
-  title: string;
-  text: string;
-  image?: File;
-  imageUrl?: string;
 }
 
 export const mockPlanejamento: Planejamento = {
@@ -262,7 +264,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setError(null);
 
     const slidePrompt = `
-      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante, além de sugestões de imagens.
+      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchindo cada um com conteúdo criativo e relevante, além de sugestões de imagens.
 
       O tema da apresentação é: "${planejamento.tituloAula}".
 
@@ -289,8 +291,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       - Seja criativo e direto em todas as suas sugestões.
       - As imagens devem ser sugestões de alta qualidade, que possam ser facilmente encontradas em bancos de imagens.
       - Mantenha a linguagem clara e envolvente para todos os slides.
-
-      A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido com a seguinte estrutura, sem qualquer texto adicional fora do JSON:
+      - A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown \`\`\`json\n...\n\`\`\`. NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
 
       {
         "slides": [
@@ -335,6 +336,10 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       }
     `;
 
+    console.log('--- Texto enviado como parâmetro para o backend (slidePrompt) ---');
+    console.log(slidePrompt);
+    console.log('-------------------------------------------------------------');
+
     try {
       const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
@@ -348,50 +353,71 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       }
 
       const data = await response.json();
+      console.log('--- Resposta recebida do backend ---');
+      console.log(JSON.stringify(data, null, 2));
+      console.log('-----------------------------------');
+
+      const isValidJson = (str: string) => {
+        try {
+          JSON.parse(str);
+          return true;
+        } catch {
+          return false;
+        }
+      };
 
       if (data.rawText) {
-        const slideJson = JSON.parse(data.rawText);
-        if (slideJson.slides) {
-          // Envia o JSON para o webhook do n8n
-          const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
-          const n8nResponse = await fetch(n8nUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(slideJson),
-          });
+        console.log('--- Conteúdo de data.rawText ---');
+        console.log(data.rawText);
+        console.log('-------------------------------');
 
-          if (n8nResponse.ok) {
-            console.log('JSON enviado com sucesso para o webhook do n8n');
+        if (isValidJson(data.rawText)) {
+          const slideJson = JSON.parse(data.rawText);
+          if (slideJson.slides && Array.isArray(slideJson.slides)) {
+            // Envia o JSON para o webhook do n8n
+            const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
+            const n8nResponse = await fetch(n8nUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(slideJson),
+            });
+
+            if (n8nResponse.ok) {
+              console.log('JSON enviado com sucesso para o webhook do n8n');
+            } else {
+              console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
+            }
+
+            // Gera o PDF localmente a partir do JSON
+            gerarPdfSlides(slideJson.slides);
           } else {
-            console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
+            setError('Formato de resposta inválido: propriedade "slides" não encontrada ou não é um array.');
           }
-
-          // Continua gerando o PDF localmente a partir do JSON
-          gerarPdfSlides(slideJson.slides);
         } else {
-          setError('Formato de resposta inválido: slides não encontrados.');
+          setError('A resposta do backend (rawText) não é um JSON válido. Verifique os logs para mais detalhes.');
         }
+      } else if (data.updatedPlan) {
+        setError('Resposta inesperada: plano de aula recebido em vez de slides.');
       } else {
         setError('Formato de resposta inválido do backend.');
       }
     } catch (err: any) {
+      console.error('Erro ao processar a geração de slides:', err);
       setError(err.message || 'Falha ao gerar o plano de slides. Por favor, tente novamente.');
     } finally {
       setIsGeneratingSlides(false);
     }
   };
 
-  const gerarPdfSlides = (slides: any[]) => {
-    if (!slides || slides.length === 0) {
-      setError("Não há plano de slides para exportar.");
+  const gerarPdfSlides = (slides: Slide[]) => {
+    if (!slides || !Array.isArray(slides) || slides.length === 0) {
+      setError("Não há slides válidos para exportar.");
       return;
     }
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = doc.internal.pageSize.getWidth();
-    let currentY = 20;
     const margin = 20;
-    const bodyWidth = pdfWidth - 2 * margin;
     const h1FontSize = 16;
     const h2FontSize = 14;
     const pFontSize = 11;
@@ -404,45 +430,54 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       if (index > 0) {
         doc.addPage();
       }
-      currentY = 20;
+      let currentY = 20;
 
+      // Título do slide
       doc.setFontSize(h1FontSize);
       doc.setFont('helvetica', 'bold');
-      doc.text(`SLIDE ${slide.number} - ${slide.title}`, margin, currentY);
+      doc.text(`Slide ${slide.number}: ${slide.title}`, margin, currentY);
       currentY += lineHeight * 1.5;
-      doc.setFont('helvetica', 'normal');
 
+      // Texto ou introdução
       if (slide.text) {
-        const wrappedText = doc.splitTextToSize(slide.text, bodyWidth);
         doc.setFontSize(pFontSize);
+        doc.setFont('helvetica', 'normal');
+        const wrappedText = doc.splitTextToSize(slide.text, pdfWidth - 2 * margin);
         doc.text(wrappedText, margin, currentY);
-        currentY += wrappedText.length * lineHeight;
-      }
-
-      if (slide.intro) {
-        const wrappedIntro = doc.splitTextToSize(slide.intro, bodyWidth);
+        currentY += wrappedText.length * lineHeight + lineHeight;
+      } else if (slide.intro) {
         doc.setFontSize(pFontSize);
+        doc.setFont('helvetica', 'normal');
+        const wrappedIntro = doc.splitTextToSize(slide.intro, pdfWidth - 2 * margin);
         doc.text(wrappedIntro, margin, currentY);
-        currentY += wrappedIntro.length * lineHeight;
+        currentY += wrappedIntro.length * lineHeight + lineHeight;
       }
 
-      if (slide.questions) {
-        doc.setFontSize(pFontSize);
-        slide.questions.forEach((question: string) => {
-          const wrappedQuestion = doc.splitTextToSize(question, bodyWidth);
+      // Perguntas (se existirem)
+      if (slide.questions && Array.isArray(slide.questions)) {
+        doc.setFontSize(h2FontSize);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Perguntas Investigativas:', margin, currentY);
+        currentY += lineHeight;
+
+        slide.questions.forEach((question) => {
+          doc.setFontSize(pFontSize);
+          doc.setFont('helvetica', 'normal');
+          const wrappedQuestion = doc.splitTextToSize(`• ${question}`, pdfWidth - 2 * margin);
           doc.text(wrappedQuestion, margin, currentY);
           currentY += wrappedQuestion.length * lineHeight;
         });
+        currentY += lineHeight;
       }
 
+      // Sugestão de imagem
       doc.setFontSize(h2FontSize);
       doc.setFont('helvetica', 'bold');
       doc.text('Sugestão de Imagem:', margin, currentY);
       currentY += lineHeight;
-
-      const wrappedImage = doc.splitTextToSize(slide.image, bodyWidth);
       doc.setFontSize(pFontSize);
       doc.setFont('helvetica', 'normal');
+      const wrappedImage = doc.splitTextToSize(slide.image, pdfWidth - 2 * margin);
       doc.text(wrappedImage, margin, currentY);
       currentY += wrappedImage.length * lineHeight;
     });
@@ -500,8 +535,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
       O plano deve ser estruturado rigorosamente no formato JSON. Não inclua texto introdutório, explicações ou qualquer outro tipo de conteúdo fora do JSON. A sua resposta deve ser APENAS o objeto JSON.
 
-      O objeto JSON deve ter a seguinte estrutura:
-
       {
         "tituloAula": "Título claro e direto da aula",
         "ativacao": {
@@ -526,7 +559,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         "solucao_pratica": {
           "titulo": "Solução Prática",
           "metodologia": "Metodologia a ser utilizada (Ex: Brainstorming, Prototipagem, Codificação)",
-          Core Code Block
           "descricao": "Descrição detalhada de como os alunos irão aplicar o conhecimento para criar uma solução prática. Pode incluir blocos de código markdown se for relevante."
         },
         "mini_projeto": {
@@ -543,26 +575,21 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         ],
         "observacoesIA": "Observações adicionais ou notas pedagógicas da IA sobre o plano de aula gerado."
       }
-
-      Garanta que a resposta seja um JSON válido. Não adicione nenhum outro texto além do objeto JSON.
     `;
 
     try {
       const response = await fetch('https://site-pd.onrender.com/gemini/generate-lesson-plan', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: jsonPrompt }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || errorData.error || 'Algo deu errado no servidor backend.');
+        throw new Error(errorData.message || 'Falha ao gerar o plano de aula.');
       }
 
       const data = await response.json();
-
       if (data && typeof data === 'object' && 'tituloAula' in data) {
         setPlanejamento(data);
         setEditedPlanejamento(data);
