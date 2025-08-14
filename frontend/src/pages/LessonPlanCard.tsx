@@ -357,22 +357,39 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       console.log(JSON.stringify(data, null, 2));
       console.log('-----------------------------------');
 
-      const isValidJson = (str: string) => {
-        try {
-          JSON.parse(str);
-          return true;
-        } catch {
-          return false;
-        }
-      };
-
       if (data.rawText) {
         console.log('--- Conteúdo de data.rawText ---');
         console.log(data.rawText);
         console.log('-------------------------------');
 
-        if (isValidJson(data.rawText)) {
-          const slideJson = JSON.parse(data.rawText);
+        // Extrair o JSON do bloco markdown
+        const jsonMatch = data.rawText.match(/```json\n([\s\S]*?)```/);
+        let jsonString: string;
+
+        if (jsonMatch && jsonMatch[1]) {
+          jsonString = jsonMatch[1].trim();
+          console.log('--- JSON extraído do bloco markdown ---');
+          console.log(jsonString);
+          console.log('--------------------------------------');
+        } else {
+          jsonString = data.rawText.trim();
+          console.log('--- Nenhum bloco markdown encontrado, usando texto bruto ---');
+          console.log(jsonString);
+          console.log('---------------------------------------------------------');
+        }
+
+        // Validar se é um JSON
+        const isValidJson = (str: string) => {
+          try {
+            JSON.parse(str);
+            return true;
+          } catch {
+            return false;
+          }
+        };
+
+        if (isValidJson(jsonString)) {
+          const slideJson = JSON.parse(jsonString);
           if (slideJson.slides && Array.isArray(slideJson.slides)) {
             // Envia o JSON para o webhook do n8n
             const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
@@ -394,7 +411,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
             setError('Formato de resposta inválido: propriedade "slides" não encontrada ou não é um array.');
           }
         } else {
-          setError('A resposta do backend (rawText) não é um JSON válido. Verifique os logs para mais detalhes.');
+          setError('A resposta do backend (rawText) não contém um JSON válido após extração. Verifique os logs para mais detalhes.');
         }
       } else if (data.updatedPlan) {
         setError('Resposta inesperada: plano de aula recebido em vez de slides.');
