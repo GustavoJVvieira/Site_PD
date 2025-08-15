@@ -159,6 +159,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const [isGeneratingSlides, setIsGeneratingSlides] = useState<boolean>(false);
   const [showSlidePopup, setShowSlidePopup] = useState<boolean>(false);
   const [slideData, setSlideData] = useState<Slide[] | null>(null);
+  const [isSendingToN8n, setIsSendingToN8n] = useState<boolean>(false);
 
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
@@ -278,6 +279,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const sendToN8nAndProcessResponse = async () => {
     if (!slideData) return;
 
+    setIsSendingToN8n(true);
     const payload = { slides: slideData };
     const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
 
@@ -304,15 +306,18 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       } else {
         console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
         setError('Erro ao enviar para n8n.');
+        setIsSendingToN8n(false);
       }
     } catch (err: any) {
       console.error('Erro ao processar envio para n8n:', err);
       setError(err.message || 'Falha ao enviar para n8n.');
+      setIsSendingToN8n(false);
     }
   };
 
   const closePopup = () => {
     setShowSlidePopup(false);
+    setIsSendingToN8n(false);
   };
 
   const gerarPlanoDeSlides = async () => {
@@ -342,10 +347,10 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       Título e Texto: Formule um título e um parágrafo introdutório para o slide.
       Tópicos (2): Crie duas perguntas investigativas que incentivem a exploração e a curiosidade sobre o tema, levando a uma reflexão mais profunda.
 
-      Slide 5: Aplicação Prática
+      Slide 6: Aplicação Prática
       Título e Texto: Crie um título e um texto que descrevam uma aplicação prática e concreta do conteúdo.
 
-      Slide 6: Mini-Desafio
+      Slide 7: Mini-Desafio
       Título e Texto: Proponha um título e um texto para um mini-desafio rápido e prático. O objetivo é que o público possa realizar o desafio imediatamente para aplicar o que aprendeu.
 
       Instruções Adicionais:
@@ -1011,8 +1016,12 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button onClick={sendToN8nAndProcessResponse} className="generate-button">
-                Enviar para n8n
+              <button
+                onClick={sendToN8nAndProcessResponse}
+                className="generate-button"
+                disabled={isSendingToN8n}
+              >
+                {isSendingToN8n ? 'Gerando' : 'Enviar para n8n'}
               </button>
               <button onClick={closePopup} className="cancel-edit-button">
                 Cancelar
