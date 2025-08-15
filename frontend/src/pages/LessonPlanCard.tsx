@@ -49,7 +49,6 @@ export interface Slide {
   text?: string;
   intro?: string;
   questions?: string[];
-  image: string;
 }
 
 export interface LessonPlanCardProps {
@@ -276,7 +275,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     });
   };
 
-  const sendToN8nAndGeneratePDF = async () => {
+  const sendToN8nAndProcessResponse = async () => {
     if (!slideData) return;
 
     const payload = { slides: slideData };
@@ -290,15 +289,22 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       });
 
       if (n8nResponse.ok) {
-        console.log('JSON enviado com sucesso para o webhook do n8n');
+        const blob = await n8nResponse.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "IA-Mais-Humana.pptx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        console.log('Arquivo baixado com sucesso!');
+        setShowSlidePopup(false);
       } else {
         console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
         setError('Erro ao enviar para n8n.');
-        return;
       }
-
-      gerarPdfSlides(slideData);
-      setShowSlidePopup(false);
     } catch (err: any) {
       console.error('Erro ao processar envio para n8n:', err);
       setError(err.message || 'Falha ao enviar para n8n.');
@@ -319,7 +325,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setError(null);
 
     const slidePrompt = `
-      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante, além de sugestões de imagens.
+      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante.
 
       O tema da apresentação é: "${planejamento.tituloAula}".
 
@@ -344,7 +350,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
       Instruções Adicionais:
       - Seja criativo e direto em todas as suas sugestões.
-      - As imagens devem ser sugestões de alta qualidade, que possam ser facilmente encontradas em bancos de imagens.
       - Mantenha a linguagem clara e envolvente para todos os slides.
       - A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown \`\`\`json\n...\n\`\`\`. NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
 
@@ -353,39 +358,33 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           {
             "number": 1,
             "title": "Título impactante para o tema",
-            "text": "",
-            "image": "Sugestão de imagem de alta qualidade"
+            "text": ""
           },
           {
             "number": 2,
             "title": "Título do slide",
-            "text": "Parágrafo de texto",
-            "image": "Sugestão de imagem de alta qualidade"
+            "text": "Parágrafo de texto"
           },
           {
             "number": 3,
             "title": "Título do slide",
-            "text": "Parágrafo de texto",
-            "image": "Sugestão de imagem de alta qualidade"
+            "text": "Parágrafo de texto"
           },
           {
             "number": 4,
             "title": "Título do slide",
             "intro": "Parágrafo introdutório",
-            "questions": ["Pergunta 1", "Pergunta 2"],
-            "image": "Sugestão de imagem de alta qualidade"
+            "questions": ["Pergunta 1", "Pergunta 2"]
           },
           {
             "number": 5,
             "title": "Título do slide",
-            "text": "Parágrafo de texto",
-            "image": "Sugestão de imagem de alta qualidade"
+            "text": "Parágrafo de texto"
           },
           {
             "number": 6,
             "title": "Título do slide",
-            "text": "Parágrafo de texto",
-            "image": "Sugestão de imagem de alta qualidade"
+            "text": "Parágrafo de texto"
           }
         ]
       }
@@ -465,83 +464,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     } finally {
       setIsGeneratingSlides(false);
     }
-  };
-
-  const gerarPdfSlides = (slides: Slide[]) => {
-    if (!slides || !Array.isArray(slides) || slides.length === 0) {
-      setError("Não há slides válidos para exportar.");
-      return;
-    }
-
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    const h1FontSize = 16;
-    const h2FontSize = 14;
-    const pFontSize = 11;
-    const lineHeight = 7;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    slides.forEach((slide, index) => {
-      if (index > 0) {
-        doc.addPage();
-      }
-      let currentY = 20;
-
-      // Título do slide
-      doc.setFontSize(h1FontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Slide ${slide.number}: ${slide.title}`, margin, currentY);
-      currentY += lineHeight * 1.5;
-
-      // Texto ou introdução
-      if (slide.text) {
-        doc.setFontSize(pFontSize);
-        doc.setFont('helvetica', 'normal');
-        const wrappedText = doc.splitTextToSize(slide.text, pdfWidth - 2 * margin);
-        doc.text(wrappedText, margin, currentY);
-        currentY += wrappedText.length * lineHeight + lineHeight;
-      } else if (slide.intro) {
-        doc.setFontSize(pFontSize);
-        doc.setFont('helvetica', 'normal');
-        const wrappedIntro = doc.splitTextToSize(slide.intro, pdfWidth - 2 * margin);
-        doc.text(wrappedIntro, margin, currentY);
-        currentY += wrappedIntro.length * lineHeight + lineHeight;
-      }
-
-      // Perguntas (se existirem)
-      if (slide.questions && Array.isArray(slide.questions)) {
-        doc.setFontSize(h2FontSize);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Perguntas Investigativas:', margin, currentY);
-        currentY += lineHeight;
-
-        slide.questions.forEach((question) => {
-          doc.setFontSize(pFontSize);
-          doc.setFont('helvetica', 'normal');
-          const wrappedQuestion = doc.splitTextToSize(`• ${question}`, pdfWidth - 2 * margin);
-          doc.text(wrappedQuestion, margin, currentY);
-          currentY += wrappedQuestion.length * lineHeight;
-        });
-        currentY += lineHeight;
-      }
-
-      // Sugestão de imagem
-      doc.setFontSize(h2FontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Sugestão de Imagem:', margin, currentY);
-      currentY += lineHeight;
-      doc.setFontSize(pFontSize);
-      doc.setFont('helvetica', 'normal');
-      const wrappedImage = doc.splitTextToSize(slide.image, pdfWidth - 2 * margin);
-      doc.text(wrappedImage, margin, currentY);
-      currentY += wrappedImage.length * lineHeight;
-    });
-
-    const fileName = `plano_de_slides_${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'gerado'}.pdf`;
-    doc.save(fileName);
   };
 
   const handlePlanejamentoChange = (
@@ -1038,7 +960,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
       {showSlidePopup && slideData && (
         <div className="popup-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="popup-content" style={{ background: 'white', padding: '20px', borderRadius: '8px', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
+          <div className="popup-content" style={{ background: '#000000', color: '#ffffff', padding: '20px', borderRadius: '8px', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <h2>Revise e Edite o Plano de Slides</h2>
             {slideData.map((slide, index) => (
               <div key={index} style={{ marginBottom: '20px' }}>
@@ -1048,7 +970,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                   type="text"
                   value={slide.title}
                   onChange={handleSlideChange(index, 'title')}
-                  style={{ width: '100%', marginBottom: '10px' }}
+                  style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
                 />
                 {slide.text !== undefined && (
                   <>
@@ -1057,7 +979,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                       value={slide.text}
                       onChange={handleSlideChange(index, 'text')}
                       rows={4}
-                      style={{ width: '100%', marginBottom: '10px' }}
+                      style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
                     />
                   </>
                 )}
@@ -1068,7 +990,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                       value={slide.intro}
                       onChange={handleSlideChange(index, 'intro')}
                       rows={4}
-                      style={{ width: '100%', marginBottom: '10px' }}
+                      style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
                     />
                   </>
                 )}
@@ -1081,23 +1003,16 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                         type="text"
                         value={question}
                         onChange={handleQuestionChange(index, qIndex)}
-                        style={{ width: '100%', marginBottom: '5px' }}
+                        style={{ width: '100%', marginBottom: '5px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
                       />
                     ))}
                   </>
                 )}
-                <label>URL da Imagem:</label>
-                <input
-                  type="text"
-                  value={slide.image}
-                  onChange={handleSlideChange(index, 'image')}
-                  style={{ width: '100%', marginBottom: '10px' }}
-                />
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button onClick={sendToN8nAndGeneratePDF} className="generate-button">
-                Enviar para n8n e Gerar PDF
+              <button onClick={sendToN8nAndProcessResponse} className="generate-button">
+                Enviar para n8n
               </button>
               <button onClick={closePopup} className="cancel-edit-button">
                 Cancelar
