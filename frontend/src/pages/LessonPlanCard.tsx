@@ -158,6 +158,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const lessonPlanRef = useRef<HTMLDivElement>(null);
   const currentPlanejamento = isEditMode && editedPlanejamento ? editedPlanejamento : planejamento;
   const [isGeneratingSlides, setIsGeneratingSlides] = useState<boolean>(false);
+  const [showSlidePopup, setShowSlidePopup] = useState<boolean>(false);
+  const [slideData, setSlideData] = useState<Slide[] | null>(null);
 
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
@@ -254,6 +256,59 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     doc.save(fileName);
   };
 
+  const handleSlideChange = (index: number, field: keyof Slide) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setSlideData(prev => {
+      if (!prev) return null;
+      const newSlides = [...prev];
+      newSlides[index] = { ...newSlides[index], [field]: e.target.value };
+      return newSlides;
+    });
+  };
+
+  const handleQuestionChange = (slideIndex: number, questionIndex: number) => (e: ChangeEvent<HTMLInputElement>) => {
+    setSlideData(prev => {
+      if (!prev) return null;
+      const newSlides = [...prev];
+      const questions = [...(newSlides[slideIndex].questions || [])];
+      questions[questionIndex] = e.target.value;
+      newSlides[slideIndex].questions = questions;
+      return newSlides;
+    });
+  };
+
+  const sendToN8nAndGeneratePDF = async () => {
+    if (!slideData) return;
+
+    const payload = { slides: slideData };
+    const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
+
+    try {
+      const n8nResponse = await fetch(n8nUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (n8nResponse.ok) {
+        console.log('JSON enviado com sucesso para o webhook do n8n');
+      } else {
+        console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
+        setError('Erro ao enviar para n8n.');
+        return;
+      }
+
+      gerarPdfSlides(slideData);
+      setShowSlidePopup(false);
+    } catch (err: any) {
+      console.error('Erro ao processar envio para n8n:', err);
+      setError(err.message || 'Falha ao enviar para n8n.');
+    }
+  };
+
+  const closePopup = () => {
+    setShowSlidePopup(false);
+  };
+
   const gerarPlanoDeSlides = async () => {
     if (!planejamento) {
       setError("Gere um plano de aula primeiro para depois gerar o plano de slides.");
@@ -264,7 +319,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setError(null);
 
     const slidePrompt = `
-      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchindo cada um com conteúdo criativo e relevante, além de sugestões de imagens.
+      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante, além de sugestões de imagens.
 
       O tema da apresentação é: "${planejamento.tituloAula}".
 
@@ -391,22 +446,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         if (isValidJson(jsonString)) {
           const slideJson = JSON.parse(jsonString);
           if (slideJson.slides && Array.isArray(slideJson.slides)) {
-            // Envia o JSON para o webhook do n8n
-            const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
-            const n8nResponse = await fetch(n8nUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(slideJson),
-            });
-
-            if (n8nResponse.ok) {
-              console.log('JSON enviado com sucesso para o webhook do n8n');
-            } else {
-              console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
-            }
-
-            // Gera o PDF localmente a partir do JSON
-            gerarPdfSlides(slideJson.slides);
+            setSlideData(slideJson.slides);
+            setShowSlidePopup(true);
           } else {
             setError('Formato de resposta inválido: propriedade "slides" não encontrada ou não é um array.');
           }
@@ -994,6 +1035,77 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showSlidePopup && slideData && (
+        <div className="popup-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="popup-content" style={{ background: 'white', padding: '20px', borderRadius: '8px', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h2>Revise e Edite o Plano de Slides</h2>
+            {slideData.map((slide, index) => (
+              <div key={index} style={{ marginBottom: '20px' }}>
+                <h3>Slide {slide.number}</h3>
+                <label>Título:</label>
+                <input
+                  type="text"
+                  value={slide.title}
+                  onChange={handleSlideChange(index, 'title')}
+                  style={{ width: '100%', marginBottom: '10px' }}
+                />
+                {slide.text !== undefined && (
+                  <>
+                    <label>Texto:</label>
+                    <textarea
+                      value={slide.text}
+                      onChange={handleSlideChange(index, 'text')}
+                      rows={4}
+                      style={{ width: '100%', marginBottom: '10px' }}
+                    />
+                  </>
+                )}
+                {slide.intro && (
+                  <>
+                    <label>Introdução:</label>
+                    <textarea
+                      value={slide.intro}
+                      onChange={handleSlideChange(index, 'intro')}
+                      rows={4}
+                      style={{ width: '100%', marginBottom: '10px' }}
+                    />
+                  </>
+                )}
+                {slide.questions && (
+                  <>
+                    <label>Perguntas:</label>
+                    {slide.questions.map((question, qIndex) => (
+                      <input
+                        key={qIndex}
+                        type="text"
+                        value={question}
+                        onChange={handleQuestionChange(index, qIndex)}
+                        style={{ width: '100%', marginBottom: '5px' }}
+                      />
+                    ))}
+                  </>
+                )}
+                <label>URL da Imagem:</label>
+                <input
+                  type="text"
+                  value={slide.image}
+                  onChange={handleSlideChange(index, 'image')}
+                  style={{ width: '100%', marginBottom: '10px' }}
+                />
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button onClick={sendToN8nAndGeneratePDF} className="generate-button">
+                Enviar para n8n e Gerar PDF
+              </button>
+              <button onClick={closePopup} className="cancel-edit-button">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };
