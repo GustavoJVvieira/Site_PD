@@ -281,7 +281,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
     setIsSendingToN8n(true);
     const payload = { slides: slideData };
-    const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook/2b37eb32-604e-42b4-9828-4f1e20814f13';
+    const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
 
     try {
       const n8nResponse = await fetch(n8nUrl, {
@@ -295,7 +295,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = "`Slide_PDTeacher.pptx";
+        a.download = `${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'slides'}.pptx`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -344,8 +344,9 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       Slide 3: Problema Real
       Título e Texto: Desenvolva um título e um texto que liguem o assunto a um problema real e tangível, mostrando sua importância na prática.
 
-      Slide 5: Aplicação Prática
-      Título e Texto: Crie um título e um texto que descrevam uma aplicação prática e concreta do conteúdo.
+      Slide 4: Perguntas Investigativas
+      Título e Texto: Formule um título e um parágrafo introdutório para o slide.
+      Tópicos (2): Crie duas perguntas investigativas que incentivem a exploração e a curiosidade sobre o tema, levando a uma reflexão mais profunda.
 
       Slide 6: Mini-Desafio
       Título e Texto: Proponha um título e um texto para um mini-desafio rápido e prático. O objetivo é que o público possa realizar o desafio imediatamente para aplicar o que aprendeu.
@@ -376,9 +377,10 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
             "text": "Parágrafo de texto"
           },
           {
-            "number": 5,
+            "number": 4,
             "title": "Título do slide",
-            "text": "Parágrafo de texto"
+            "intro": "Parágrafo introdutório",
+            "questions": ["Pergunta 1", "Pergunta 2"]
           },
           {
             "number": 6,
