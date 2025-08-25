@@ -183,7 +183,7 @@ export class GeminiService {
         console.log('--- Detalhes da Resposta do Modelo ---');
         console.log('Candidates:', JSON.stringify(response.candidates, null, 2));
         console.log('Prompt Feedback:', JSON.stringify(response.promptFeedback, null, 2));
-        console.log('Finish Reason:', response.candidates[0]?.finishReason || 'N/A');
+        console.log('Finish Reason:', response.candidates && response.candidates[0] ? response.candidates[0].finishReason || 'N/A' : 'Candidates undefined');
         
         let text = response.text().trim();
         console.log('--- Resposta bruta da IA (Chat) ---');
