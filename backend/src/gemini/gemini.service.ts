@@ -50,12 +50,11 @@ export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
 
   private readonly model_priority = [
-    "gemini-2.5-pro",
-    "gemini-1.5-pro-latest",
-    "gemini-1.5-pro-latest", // Preferência por modelos mais recentes e poderosos
+    "gemini-1.5-pro-latest", // Priorizar modelos mais estáveis
     "gemini-1.5-pro",
     "gemini-1.5-flash-latest",
     "gemini-1.5-flash",
+    "gemini-2.5-pro", // Movido para o final devido a problemas de resposta vazia
   ];
 
   constructor(
@@ -154,9 +153,9 @@ export class GeminiService {
 
     this.logger.error(`Todos os modelos na lista de prioridade falharam. Último erro: ${lastError?.message}`, lastError?.stack);
     if (lastError && lastError.message.includes('503 Service Unavailable')) {
-        throw new InternalServerErrorException('No momento, os modelos de IA estão sobrecarregados. Por favor, tente novamente mais tarde.');
+      throw new InternalServerErrorException('No momento, os modelos de IA estão sobrecarregados. Por favor, tente novamente mais tarde.');
     } else if (lastError && lastError.message.includes('404 Not Found')) {
-        throw new InternalServerErrorException('Não foi possível encontrar um modelo de IA disponível para a geração de conteúdo.');
+      throw new InternalServerErrorException('Não foi possível encontrar um modelo de IA disponível para a geração de conteúdo.');
     }
     throw new InternalServerErrorException('Falha ao gerar o plano de aula da IA após múltiplas tentativas. Verifique os logs para mais detalhes.');
   }
@@ -179,25 +178,44 @@ export class GeminiService {
           ],
         });
         const response = await result.response;
-        let text = response.text().trim();
+
+        // Log detalhado da resposta do modelo
+        console.log('--- Detalhes da Resposta do Modelo ---');
+        console.log('Candidates:', JSON.stringify(response.candidates, null, 2));
+        console.log('Prompt Feedback:', JSON.stringify(response.promptFeedback, null, 2));
+        console.log('Finish Reason:', response.candidates[0]?.finishReason || 'N/A');
         
-        // ADICIONADO PARA DEBUG: Imprime a resposta bruta da IA
+        let text = response.text().trim();
         console.log('--- Resposta bruta da IA (Chat) ---');
         console.log(text);
         console.log('------------------------------------');
+
+        // Verificar se a resposta é vazia
+        if (!text) {
+          this.logger.warn(`Resposta vazia do modelo ${modelName}. Tentando próximo modelo.`);
+          continue;
+        }
 
         const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
         let jsonString: string;
 
         if (jsonMatch && jsonMatch[1]) {
           jsonString = jsonMatch[1].trim();
+          this.logger.debug(`JSON extraído com sucesso do bloco de código. (modelo: ${modelName})`);
         } else {
           jsonString = text;
+          this.logger.debug(`Não foi encontrado um bloco de código. Usando texto completo. (modelo: ${modelName})`);
         }
 
         try {
           const parsedJson = JSON.parse(jsonString);
           if (
+            typeof parsedJson === 'object' && parsedJson !== null &&
+            'slides' in parsedJson && Array.isArray(parsedJson.slides)
+          ) {
+            this.logger.log(`Plano de slides gerado com sucesso pelo modelo: ${modelName}`);
+            return { rawText: text };
+          } else if (
             typeof parsedJson === 'object' && parsedJson !== null &&
             'tituloAula' in parsedJson && 'ativacao' in parsedJson &&
             'problema_real' in parsedJson && 'investigacao' in parsedJson &&
@@ -206,11 +224,11 @@ export class GeminiService {
             this.logger.log(`Plano de aula atualizado recebido do modelo: ${modelName}`);
             return { updatedPlan: parsedJson as Planejamento };
           } else {
-            this.logger.warn(`Resposta da IA é JSON, mas não um plano de aula válido. Retornando como texto bruto (modelo: ${modelName}).`);
+            this.logger.warn(`Resposta JSON não contém slides ou plano de aula válido. Retornando como texto bruto (modelo: ${modelName}).`);
             return { rawText: text };
           }
         } catch (jsonError) {
-          this.logger.log(`Resposta da IA não é JSON válido. Retornando como texto puro (modelo: ${modelName}).`);
+          this.logger.warn(`Resposta não é JSON válido: ${jsonError.message}. Retornando como texto bruto (modelo: ${modelName}).`);
           return { rawText: text };
         }
 
@@ -221,11 +239,10 @@ export class GeminiService {
     }
 
     this.logger.error(`Todos os modelos para chat falharam. Último erro: ${lastError?.message}`, lastError?.stack);
-    if (lastError && lastError.message.includes('503 Service Unavailable')) {
-        throw new InternalServerErrorException('No momento, os modelos de IA estão sobrecarregados para chat. Por favor, tente novamente mais tarde.');
-    } else if (lastError && lastError.message.includes('404 Not Found')) {
-        throw new InternalServerErrorException('Não foi possível encontrar um modelo de IA disponível para chat.');
-    }
-    throw new InternalServerErrorException('Falha ao interagir com a IA para chat após múltiplas tentativas. Verifique os logs para mais detalhes.');
+    throw new InternalServerErrorException(
+      lastError?.message.includes('503') ? 'Modelos de IA sobrecarregados. Tente novamente mais tarde.' :
+      lastError?.message.includes('404') ? 'Modelo de IA não encontrado.' :
+      'Falha ao interagir com a IA. Resposta vazia ou inválida. Verifique o prompt ou tente novamente.'
+    );
   }
 }
