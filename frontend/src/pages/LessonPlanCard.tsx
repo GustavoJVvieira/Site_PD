@@ -49,6 +49,7 @@ export interface Slide {
   text?: string;
   intro?: string;
   questions?: string[];
+  image_prompt?: string;
 }
 
 export interface LessonPlanCardProps {
@@ -357,6 +358,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       Instruções Adicionais:
       - Seja criativo e direto em todas as suas sugestões.
       - Mantenha a linguagem clara e envolvente para todos os slides.
+      - Para cada slide, forneça um "image_prompt" que seja um prompt descritivo e criativo para gerar uma imagem visual que represente o conteúdo do slide de forma atraente (ex: usando ferramentas como DALL-E ou similar).
       - A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown \`\`\`json\n...\n\`\`\`. NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
 
       {
@@ -364,33 +366,39 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           {
             "number": 1,
             "title": "Título impactante para o tema",
-            "text": ""
+            "text": "",
+            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
           },
           {
             "number": 2,
             "title": "Título do slide",
-            "text": "Parágrafo de texto"
+            "text": "Parágrafo de texto",
+            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
           },
           {
             "number": 3,
             "title": "Título do slide",
-            "text": "Parágrafo de texto"
+            "text": "Parágrafo de texto",
+            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
           },
           {
             "number": 4,
             "title": "Título do slide",
             "intro": "Parágrafo introdutório",
-            "questions": ["Pergunta 1", "Pergunta 2"]
+            "questions": ["Pergunta 1", "Pergunta 2"],
+            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
           },
           {
             "number": 6,
             "title": "Título do slide",
-            "text": "Parágrafo de texto"
+            "text": "Parágrafo de texto",
+            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
           },
           {
             "number": 7,
             "title": "Título do slide",
-            "text": "Parágrafo de texto"
+            "text": "Parágrafo de texto",
+            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
           }
         ]
       }
@@ -1014,6 +1022,13 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                     ))}
                   </>
                 )}
+                <label>Prompt de Imagem Recomendada:</label>
+                <textarea
+                  value={slide.image_prompt || ''}
+                  onChange={handleSlideChange(index, 'image_prompt')}
+                  rows={3}
+                  style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
+                />
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
