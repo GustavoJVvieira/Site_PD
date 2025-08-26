@@ -50,6 +50,7 @@ export interface Slide {
   intro?: string;
   questions?: string[];
   image_prompt?: string;
+  image_url?: string;
 }
 
 export interface LessonPlanCardProps {
@@ -102,21 +103,21 @@ export const mockPlanejamento: Planejamento = {
     titulo: "Solução Prática",
     metodologia: "Brainstorming e prototipagem",
     descricao: `\`\`\`javascript
-    // Exemplo de pseudocódigo para um semáforo inteligente
-    function SemafaroInteligente(dadosDeTrafego) {
-      if (dadosDeTrafego.fluxoVeiculos > 80 && dadosDeTrafego.pedestres == 0) {
-        // Semáforo da via principal permanece verde por mais tempo
-        return "VERDE_LONGO";
-      } else if (dadosDeTrafego.fluxoVeiculos < 20 && dadosDeTrafego.pedestres > 5) {
-        // Priorizar pedestres
-        return "VERMELHO_RAPIDO_VERDE_PEDESTRE";
-      } else {
-        // Seguir o padrão normal ou otimizar com base em dados históricos
-        return "PADRAO";
-      }
-    }
-    \`\`\`
-    Peça aos alunos para expandirem este pseudocódigo, adicionando mais variáveis e condições.`,
+// Exemplo de pseudocódigo para um semáforo inteligente
+function SemafaroInteligente(dadosDeTrafego) {
+  if (dadosDeTrafego.fluxoVeiculos > 80 && dadosDeTrafego.pedestres == 0) {
+    // Semáforo da via principal permanece verde por mais tempo
+    return "VERDE_LONGO";
+  } else if (dadosDeTrafego.fluxoVeiculos < 20 && dadosDeTrafego.pedestres > 5) {
+    // Priorizar pedestres
+    return "VERMELHO_RAPIDO_VERDE_PEDESTRE";
+  } else {
+    // Seguir o padrão normal ou otimizar com base em dados históricos
+    return "PADRAO";
+  }
+}
+\`\`\`
+Peça aos alunos para expandirem este pseudocódigo, adicionando mais variáveis e condições.`,
   },
   mini_projeto: {
     titulo: "Mini-Projeto",
@@ -162,6 +163,9 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const [slideData, setSlideData] = useState<Slide[] | null>(null);
   const [isSendingToN8n, setIsSendingToN8n] = useState<boolean>(false);
   const [useAIImages, setUseAIImages] = useState<boolean>(true);
+  const [generationMethod, setGenerationMethod] = useState<'ai' | 'web' | null>(null);
+  const [email, setEmail] = useState<string>('');
+  const [showMethodSelection, setShowMethodSelection] = useState<boolean>(false);
 
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
@@ -282,7 +286,15 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     if (!slideData) return;
 
     setIsSendingToN8n(true);
-    const payload = { slides: slideData, generate_images_with_ai: useAIImages };
+    const payload = {
+      slides: slideData.map(slide => ({
+        ...slide,
+        image_prompt: generationMethod === 'ai' ? slide.image_prompt : undefined,
+        image_url: generationMethod === 'web' ? slide.image_url : undefined,
+      })),
+      generate_images_with_ai: generationMethod === 'ai' && useAIImages,
+      email: generationMethod === 'ai' ? email : undefined,
+    };
     const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
 
     try {
@@ -293,17 +305,22 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       });
 
       if (n8nResponse.ok) {
-        const blob = await n8nResponse.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'slides'}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
+        if (generationMethod === 'ai') {
+          console.log('JSON enviado com sucesso para o n8n. O slide será enviado por e-mail.');
+          alert(`Solicitação enviada! O slide será enviado para ${email} em breve.`);
+        } else {
+          const blob = await n8nResponse.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'slides'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          alert('Slides gerados e baixados com sucesso!');
+        }
 
-        console.log('Arquivo baixado com sucesso!');
         setShowSlidePopup(false);
       } else {
         console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
@@ -320,11 +337,25 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const closePopup = () => {
     setShowSlidePopup(false);
     setIsSendingToN8n(false);
+    setShowMethodSelection(false); // Reset the choice popup
+    setGenerationMethod(null);
+  };
+
+  const selectGenerationMethod = (method: 'ai' | 'web') => {
+    setGenerationMethod(method);
+    setShowMethodSelection(false);
+    gerarPlanoDeSlides();
   };
 
   const gerarPlanoDeSlides = async () => {
     if (!planejamento) {
       setError("Gere um plano de aula primeiro para depois gerar o plano de slides.");
+      return;
+    }
+    
+    // If no method has been selected yet, show the choice popup
+    if (!generationMethod) {
+      setShowMethodSelection(true);
       return;
     }
 
@@ -339,7 +370,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
       Slide 1: Título e Introdução
       Título: Dê um título impactante para o tema.
-
+      
       Slide 2: Conexão com o Cotidiano
       Título e Texto: Crie um título e um parágrafo que expliquem o assunto, conectando-o de forma clara e direta com situações do dia a dia das pessoas.
 
@@ -405,10 +436,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       }
     `;
 
-    console.log('--- Texto enviado como parâmetro para o backend (slidePrompt) ---');
-    console.log(slidePrompt);
-    console.log('-------------------------------------------------------------');
-
     try {
       const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
@@ -422,32 +449,16 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       }
 
       const data = await response.json();
-      console.log('--- Resposta recebida do backend ---');
-      console.log(JSON.stringify(data, null, 2));
-      console.log('-----------------------------------');
-
       if (data.rawText) {
-        console.log('--- Conteúdo de data.rawText ---');
-        console.log(data.rawText);
-        console.log('-------------------------------');
-
-        // Extrair o JSON do bloco markdown
         const jsonMatch = data.rawText.match(/```json\n([\s\S]*?)```/);
         let jsonString: string;
 
         if (jsonMatch && jsonMatch[1]) {
           jsonString = jsonMatch[1].trim();
-          console.log('--- JSON extraído do bloco markdown ---');
-          console.log(jsonString);
-          console.log('--------------------------------------');
         } else {
           jsonString = data.rawText.trim();
-          console.log('--- Nenhum bloco markdown encontrado, usando texto bruto ---');
-          console.log(jsonString);
-          console.log('---------------------------------------------------------');
         }
 
-        // Validar se é um JSON
         const isValidJson = (str: string) => {
           try {
             JSON.parse(str);
@@ -460,7 +471,13 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         if (isValidJson(jsonString)) {
           const slideJson = JSON.parse(jsonString);
           if (slideJson.slides && Array.isArray(slideJson.slides)) {
-            setSlideData(slideJson.slides);
+            const initialSlideData = slideJson.slides.map((slide: Slide) => {
+              if (generationMethod === 'web') {
+                return { ...slide, image_prompt: undefined, image_url: '' };
+              }
+              return slide;
+            });
+            setSlideData(initialSlideData);
             setShowSlidePopup(true);
           } else {
             setError('Formato de resposta inválido: propriedade "slides" não encontrada ou não é um array.');
@@ -468,8 +485,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         } else {
           setError('A resposta do backend (rawText) não contém um JSON válido após extração. Verifique os logs para mais detalhes.');
         }
-      } else if (data.updatedPlan) {
-        setError('Resposta inesperada: plano de aula recebido em vez de slides.');
       } else {
         setError('Formato de resposta inválido do backend.');
       }
@@ -973,20 +988,59 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         )}
       </AnimatePresence>
 
+      {/* Pop-up de seleção do método */}
+      {showMethodSelection && (
+        <div className="popup-overlay">
+          <div className="popup-content">
+            <h2>Como você quer gerar os slides?</h2>
+            <p>Selecione uma das opções abaixo para continuar.</p>
+            <div className="button-group">
+              <button
+                onClick={() => selectGenerationMethod('ai')}
+                className="generate-button"
+              >
+                Gerar com IA (Prompts e E-mail)
+              </button>
+              <button
+                onClick={() => selectGenerationMethod('web')}
+                className="edit-button"
+              >
+                Gerar via Web (Link de Imagem)
+              </button>
+            </div>
+            <button onClick={closePopup} className="cancel-edit-button" style={{ marginTop: '10px' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pop-up de revisão e edição dos slides */}
       {showSlidePopup && slideData && (
         <div className="popup-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="popup-content" style={{ background: '#000000', color: '#ffffff', padding: '20px', borderRadius: '8px', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <h2>Revise e Edite o Plano de Slides</h2>
-            <div style={{ marginBottom: '10px' }}>
-              <label>
+            {generationMethod === 'ai' && (
+              <div style={{ marginBottom: '15px' }}>
+                <p>O slide será enviado para o seu e-mail.</p>
+                <label>Seu E-mail:</label>
                 <input
-                  type="checkbox"
-                  checked={useAIImages}
-                  onChange={(e) => setUseAIImages(e.target.checked)}
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu.email@exemplo.com"
+                  style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
                 />
-                Gerar imagens com IA (usar prompts)
-              </label>
-            </div>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={useAIImages}
+                    onChange={(e) => setUseAIImages(e.target.checked)}
+                  />
+                  Gerar imagens com IA (usar prompts)
+                </label>
+              </div>
+            )}
             {slideData.map((slide, index) => (
               <div key={index} style={{ marginBottom: '20px' }}>
                 <h3>Slide {slide.number}</h3>
@@ -1033,21 +1087,26 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                     ))}
                   </>
                 )}
-                <label>{useAIImages ? 'Prompt de Imagem Recomendada:' : 'Link da Imagem:'}</label>
-                {useAIImages ? (
-                  <textarea
-                    value={slide.image_prompt || ''}
-                    onChange={handleSlideChange(index, 'image_prompt')}
-                    rows={3}
-                    style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
-                  />
+                {generationMethod === 'ai' ? (
+                  <>
+                    <label>Prompt de Imagem Recomendada:</label>
+                    <textarea
+                      value={slide.image_prompt || ''}
+                      onChange={handleSlideChange(index, 'image_prompt')}
+                      rows={3}
+                      style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
+                    />
+                  </>
                 ) : (
-                  <input
-                    type="text"
-                    value={slide.image_prompt || ''}
-                    onChange={handleSlideChange(index, 'image_prompt')}
-                    style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
-                  />
+                  <>
+                    <label>Link da Imagem:</label>
+                    <input
+                      type="text"
+                      value={slide.image_url || ''}
+                      onChange={handleSlideChange(index, 'image_url')}
+                      style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
+                    />
+                  </>
                 )}
               </div>
             ))}
@@ -1055,9 +1114,9 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
               <button
                 onClick={sendToN8nAndProcessResponse}
                 className="generate-button"
-                disabled={isSendingToN8n}
+                disabled={isSendingToN8n || (generationMethod === 'ai' && !email)}
               >
-                {isSendingToN8n ? 'Gerando' : 'Enviar para n8n ( tempo médio 3 minutos) '}
+                {isSendingToN8n ? 'Gerando...' : (generationMethod === 'ai' ? 'Enviar para n8n (o slide será enviado por e-mail)' : 'Gerar PDF via Web')}
               </button>
               <button onClick={closePopup} className="cancel-edit-button">
                 Cancelar
