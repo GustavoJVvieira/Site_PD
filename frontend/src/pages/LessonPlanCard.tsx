@@ -344,21 +344,19 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const selectGenerationMethod = (method: 'ai' | 'web') => {
     setGenerationMethod(method);
     setShowMethodSelection(false);
-    gerarPlanoDeSlides();
+    gerarSlidesByMethod();
   };
 
-  const gerarPlanoDeSlides = async () => {
+  const handleGerarPlanoDeSlidesClick = () => {
     if (!planejamento) {
       setError("Gere um plano de aula primeiro para depois gerar o plano de slides.");
       return;
     }
-    
-    // If no method has been selected yet, show the choice popup
-    if (!generationMethod) {
-      setShowMethodSelection(true);
-      return;
-    }
+    // Always show the method selection popup when this button is clicked
+    setShowMethodSelection(true);
+  };
 
+  const gerarSlidesByMethod = async () => {
     setIsGeneratingSlides(true);
     setIsSendingToN8n(false);
     setError(null);
@@ -366,7 +364,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     const slidePrompt = `
       Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante.
 
-      O tema da apresentação é: "${planejamento.tituloAula}".
+      O tema da apresentação é: "${planejamento?.tituloAula}".
 
       Slide 1: Título e Introdução
       Título: Dê um título impactante para o tema.
@@ -839,7 +837,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                     <FileText style={{ width: '16px', height: '16px', marginRight: '4px' }} /> PDF
                   </button>
                   <button
-                    onClick={gerarPlanoDeSlides}
+                    onClick={handleGerarPlanoDeSlidesClick}
                     className="edit-button"
                     title="Gerar e Exportar Plano de Slides"
                     disabled={!planejamento || isEditMode || isGeneratingSlides}
