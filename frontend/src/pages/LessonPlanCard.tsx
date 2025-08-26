@@ -283,7 +283,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
     setIsSendingToN8n(true);
     const payload = { slides: slideData, generate_images_with_ai: useAIImages };
-    const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook/2b37eb32-604e-42b4-9828-4f1e20814f13';
+    const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
 
     try {
       const n8nResponse = await fetch(n8nUrl, {
