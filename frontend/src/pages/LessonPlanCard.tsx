@@ -296,7 +296,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'slides'}.pptx`;
+        a.download = `${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'slides'}.pdf`;
         document.body.appendChild(a);
         a.click();
         a.remove();
