@@ -282,7 +282,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 
     setIsSendingToN8n(true);
     const payload = { slides: slideData };
-    const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
+    const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook/2b37eb32-604e-42b4-9828-4f1e20814f13';
 
     try {
       const n8nResponse = await fetch(n8nUrl, {
@@ -1037,7 +1037,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                 className="generate-button"
                 disabled={isSendingToN8n}
               >
-                {isSendingToN8n ? 'Gerando' : 'Enviar para n8n'}
+                {isSendingToN8n ? 'Gerando' : 'Enviar para n8n ( tempo médio 3 minutos) '}
               </button>
               <button onClick={closePopup} className="cancel-edit-button">
                 Cancelar
