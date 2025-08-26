@@ -161,6 +161,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const [showSlidePopup, setShowSlidePopup] = useState<boolean>(false);
   const [slideData, setSlideData] = useState<Slide[] | null>(null);
   const [isSendingToN8n, setIsSendingToN8n] = useState<boolean>(false);
+  const [useAIImages, setUseAIImages] = useState<boolean>(true);
 
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
@@ -281,7 +282,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     if (!slideData) return;
 
     setIsSendingToN8n(true);
-    const payload = { slides: slideData };
+    const payload = { slides: slideData, generate_images_with_ai: useAIImages };
     const n8nUrl = 'https://pdteacher.app.n8n.cloud/webhook-test/2b37eb32-604e-42b4-9828-4f1e20814f13';
 
     try {
@@ -976,6 +977,16 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         <div className="popup-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="popup-content" style={{ background: '#000000', color: '#ffffff', padding: '20px', borderRadius: '8px', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <h2>Revise e Edite o Plano de Slides</h2>
+            <div style={{ marginBottom: '10px' }}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={useAIImages}
+                  onChange={(e) => setUseAIImages(e.target.checked)}
+                />
+                Gerar imagens com IA (usar prompts)
+              </label>
+            </div>
             {slideData.map((slide, index) => (
               <div key={index} style={{ marginBottom: '20px' }}>
                 <h3>Slide {slide.number}</h3>
@@ -1022,13 +1033,22 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
                     ))}
                   </>
                 )}
-                <label>Prompt de Imagem Recomendada:</label>
-                <textarea
-                  value={slide.image_prompt || ''}
-                  onChange={handleSlideChange(index, 'image_prompt')}
-                  rows={3}
-                  style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
-                />
+                <label>{useAIImages ? 'Prompt de Imagem Recomendada:' : 'Link da Imagem:'}</label>
+                {useAIImages ? (
+                  <textarea
+                    value={slide.image_prompt || ''}
+                    onChange={handleSlideChange(index, 'image_prompt')}
+                    rows={3}
+                    style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={slide.image_prompt || ''}
+                    onChange={handleSlideChange(index, 'image_prompt')}
+                    style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
+                  />
+                )}
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
