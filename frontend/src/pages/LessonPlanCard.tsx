@@ -166,6 +166,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const [generationMethod, setGenerationMethod] = useState<'ai' | 'web' | null>(null);
   const [email, setEmail] = useState<string>('');
   const [showMethodSelection, setShowMethodSelection] = useState<boolean>(false);
+  const [showPlanSelection, setShowPlanSelection] = useState<boolean>(false); // NOVO ESTADO
 
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
@@ -337,7 +338,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const closePopup = () => {
     setShowSlidePopup(false);
     setIsSendingToN8n(false);
-    setShowMethodSelection(false); // Reset the choice popup
+    setShowMethodSelection(false);
+    setShowPlanSelection(false); // ATUALIZADO
     setGenerationMethod(null);
   };
 
@@ -352,8 +354,34 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       setError("Gere um plano de aula primeiro para depois gerar o plano de slides.");
       return;
     }
-    // Always show the method selection popup when this button is clicked
-    setShowMethodSelection(true);
+    setShowPlanSelection(true); // ATUALIZADO
+  };
+
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const fileContent = event.target?.result as string;
+          const loadedPlan = JSON.parse(fileContent);
+
+          if (loadedPlan && typeof loadedPlan === 'object' && 'tituloAula' in loadedPlan) {
+            setPlanejamento(loadedPlan);
+            setEditedPlanejamento(loadedPlan);
+            setError(null);
+            setShowPlanSelection(false);
+            setShowMethodSelection(true);
+          } else {
+            setError('O arquivo carregado não é um plano de aula válido. Verifique o formato JSON.');
+          }
+        } catch (err) {
+          console.error('Erro ao ler ou processar o arquivo:', err);
+          setError('Erro ao processar o arquivo. Verifique se é um JSON válido.');
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   const gerarSlidesByMethod = async () => {
@@ -364,76 +392,47 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     const slidePrompt = `
       Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante.
 
-      O tema da apresentação é: "${planejamento?.tituloAula}".
+O tema da apresentação é: "${planejamento?.tituloAula}".
 
-      Slide 1: Título e Introdução
-      Título: Dê um título impactante para o tema.
-      
-      Slide 2: Conexão com o Cotidiano
-      Título e Texto: Crie um título e um parágrafo que expliquem o assunto, conectando-o de forma clara e direta com situações do dia a dia das pessoas.
+- **Slide 1: Título e Contexto**
+    - Título: Dê um título curto e impactante para o tema.
+    - Texto: Descreva o contexto da aula, o que foi visto anteriormente e o que será abordado agora.
+    - **image_prompt**: Crie um prompt descritivo e criativo para gerar uma imagem visual que represente o conteúdo.
 
-      Slide 3: Problema Real
-      Título e Texto: Desenvolva um título e um texto que liguem o assunto a um problema real e tangível, mostrando sua importância na prática.
+- **Slide 2: Problema**
+    - Título: Crie um título para o problema a ser discutido.
+    - Texto: Apresente o problema de forma clara, usando tópicos para listar os principais pontos negativos ou desafios que os alunos enfrentam.
+    - **image_prompt**: Crie um prompt para uma imagem que represente visualmente este problema.
 
-      Slide 4: Perguntas Investigativas
-      Título e Texto: Formule um título e um parágrafo introdutório para o slide.
-      Tópicos (2): Crie duas perguntas investigativas que incentivem a exploração e a curiosidade sobre o tema, levando a uma reflexão mais profunda.
+- **Slide 3: Solução**
+    - Título: Dê um título que apresente a solução para o problema.
+    - Texto: Liste, em tópicos, a solução para o problema, explicando o que será ensinado para resolvê-lo.
+    - **image_prompt**: Crie um prompt para uma imagem que represente visualmente a solução.
 
-      Slide 6: Mini-Desafio
-      Título e Texto: Proponha um título e um texto para um mini-desafio rápido e prático. O objetivo é que o público possa realizar o desafio imediatamente para aplicar o que aprendeu.
+- **Slide 4: Prática**
+    - Título: Crie um título para a seção prática.
+    - Intro: Crie um parágrafo introdutório para o slide.
+    - Tópicos: Crie dois tópicos que incentivem a aplicação prática do conteúdo, com exemplos claros.
+    - **image_prompt**: Crie um prompt para uma imagem que represente a prática de forma visualmente atraente.
 
-      Slide 7: Conclusão
-      Título e Texto: Crie um título e um texto que resumam os pontos principais da apresentação e deixem uma mensagem final impactante.
+- **Slide 6: Tarefa/Mini-Desafio**
+    - Título: Proponha um título para a tarefa ou mini-desafio.
+    - Texto: Proponha uma tarefa rápida e prática para que o público aplique o que aprendeu.
+    - **image_prompt**: Crie um prompt para uma imagem que represente visualmente a tarefa.
 
-      Instruções Adicionais:
-      - Seja criativo e direto em todas as suas sugestões.
-      - Mantenha a linguagem clara e envolvente para todos os slides.
-      - Para cada slide, forneça um "image_prompt" que seja um prompt descritivo e criativo para gerar uma imagem visual que represente o conteúdo do slide de forma atraente (ex: usando ferramentas como DALL-E ou similar).
-      - A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown \`\`\`json\n...\n\`\`\`. NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
+- **Slide 7: Conclusão**
+    - Título: Dê um título para a conclusão.
+    - Texto: Crie um texto que resuma os pontos principais da apresentação e deixe uma mensagem final impactante.
+    - **image_prompt**: Crie um prompt para uma imagem que represente a mensagem final de forma memorável.
 
-      {
-        "slides": [
-          {
-            "number": 1,
-            "title": "Título impactante para o tema",
-            "text": "",
-            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
-          },
-          {
-            "number": 2,
-            "title": "Título do slide",
-            "text": "Parágrafo de texto",
-            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
-          },
-          {
-            "number": 3,
-            "title": "Título do slide",
-            "text": "Parágrafo de texto",
-            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
-          },
-          {
-            "number": 4,
-            "title": "Título do slide",
-            "intro": "Parágrafo introdutório",
-            "questions": ["Pergunta 1", "Pergunta 2"],
-            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
-          },
-          {
-            "number": 6,
-            "title": "Título do slide",
-            "text": "Parágrafo de texto",
-            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
-          },
-          {
-            "number": 7,
-            "title": "Título do slide",
-            "text": "Parágrafo de texto",
-            "image_prompt": "Prompt descritivo para uma imagem que represente visualmente este slide"
-          }
-        ]
-      }
-    `;
-
+Instruções Adicionais:
+- Mantenha a linguagem clara e envolvente para todos os slides.
+- A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown ```json\n...\n```.
+- NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
+- As listas devem estar em formato de array de strings para quebras de linha (`"text": ["Ponto 1", "Ponto 2"]`).
+- O título deve ser curto.
+`
+    
     try {
       const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
@@ -985,6 +984,39 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Pop-up de seleção do plano de aula */}
+      {showPlanSelection && (
+        <div className="popup-overlay">
+          <div className="popup-content">
+            <h2>Qual plano de aula você quer usar?</h2>
+            <p>Você pode usar o plano atual ou carregar um novo a partir de um arquivo JSON.</p>
+            <div className="button-group">
+              <button
+                onClick={() => {
+                  setShowPlanSelection(false);
+                  setShowMethodSelection(true);
+                }}
+                className="generate-button"
+              >
+                Usar Plano Atual
+              </button>
+              <label className="file-upload-button">
+                Carregar Novo Plano
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+            <button onClick={closePopup} className="cancel-edit-button" style={{ marginTop: '10px' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Pop-up de seleção do método */}
       {showMethodSelection && (
