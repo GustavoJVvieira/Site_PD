@@ -166,8 +166,9 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const [generationMethod, setGenerationMethod] = useState<'ai' | 'web' | null>(null);
   const [email, setEmail] = useState<string>('');
   const [showMethodSelection, setShowMethodSelection] = useState<boolean>(false);
-  const [showCustomPlanInput, setShowCustomPlanInput] = useState<boolean>(false); // NOVO ESTADO
-  const [customPlan, setCustomPlan] = useState<string>(''); // NOVO ESTADO
+  const [showCustomPlanInput, setShowCustomPlanInput] = useState<boolean>(false);
+  const [customPlan, setCustomPlan] = useState<string>('');
+  const [isProcessingText, setIsProcessingText] = useState<boolean>(false);
 
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
@@ -340,7 +341,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setShowSlidePopup(false);
     setIsSendingToN8n(false);
     setShowMethodSelection(false);
-    setShowCustomPlanInput(false); // NOVO FLUXO
+    setShowCustomPlanInput(false);
     setGenerationMethod(null);
   };
 
@@ -373,6 +374,88 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     } catch (err) {
       console.error('Erro ao processar o JSON:', err);
       setError('Erro ao processar o texto. Verifique se é um JSON válido.');
+    }
+  };
+
+  const handleGerarSlidesFromText = async () => {
+    setIsProcessingText(true);
+    setPlanejamento(null);
+    setEditedPlanejamento(null);
+    setIsEditMode(false);
+    setError(null);
+  
+    // Prompt para gerar um plano de aula completo a partir de um texto livre
+    const lessonPlanPrompt = `
+      Crie um plano de aula completo seguindo a metodologia de ensino "Desenvolve" a partir do seguinte texto ou tema livre: "${demanda}".
+
+      O plano deve ser estruturado rigorosamente no formato JSON. Não inclua texto introdutório, explicações ou qualquer outro tipo de conteúdo fora do JSON. A sua resposta deve ser APENAS o objeto JSON.
+
+      {
+        "tituloAula": "Título claro e direto da aula",
+        "ativacao": {
+          "titulo": "Ativação",
+          "metodologia": "Metodologia a ser utilizada (Ex: Debate em grupo, Perguntas e Respostas)",
+          "pergunta_inicial": "Uma pergunta provocadora para iniciar a aula.",
+          "atividade": "Descrição da atividade inicial para ativar o conhecimento prévio dos alunos. Pode incluir listas com tópicos."
+        },
+        "problema_real": {
+          "titulo": "Problema Real",
+          "metodologia": "Metodologia a ser utilizada (Ex: Estudo de caso, Análise de cenários)",
+          "cenario": "Descrição de um cenário real ou fictício que contextualiza o problema. Pode conter links ou imagens em formato markdown.",
+          "pergunta_problema": "A pergunta central que o problema levanta.",
+          "importancia": ["Explicação da relevância do problema na vida real dos alunos, em formato de lista."]
+        },
+        "investigacao": {
+          "titulo": "Investigação",
+          "metodologia": "Metodologia a ser utilizada (Ex: Pesquisa guiada, Exploração de recursos)",
+          "perguntas_guiadas": ["Lista de perguntas que guiam a investigação dos alunos."],
+          "elementos_descobertos": ["Lista de conceitos ou elementos que os alunos devem descobrir na investigação."]
+        },
+        "solucao_pratica": {
+          "titulo": "Solução Prática",
+          "metodologia": "Metodologia a ser utilizada (Ex: Brainstorming, Prototipagem, Codificação)",
+          "descricao": "Descrição detalhada de como os alunos irão aplicar o conhecimento para criar uma solução prática. Pode incluir blocos de código markdown se for relevante."
+        },
+        "mini_projeto": {
+          "titulo": "Mini-Projeto",
+          "metodologia": "Metodologia do mini-projeto (Ex: Construção de modelo, Desenvolvimento de protótipo)",
+          "desafio": ["Descrição do desafio final para os alunos aplicarem o que aprenderam, em formato de lista."]
+        },
+        "sugestaoAulasCSV": [
+          {
+            "idAula": "ID da aula no currículo (ex: '101')",
+            "temaAula": "Tema da aula",
+            "justificativa": "Breve justificativa de por que essa aula se conecta ao tema."
+          }
+        ],
+        "observacoesIA": "Observações adicionais ou notas pedagógicas da IA sobre o plano de aula gerado."
+      }
+    `;
+
+    try {
+      const response = await fetch('https://site-pd.onrender.com/gemini/generate-lesson-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: lessonPlanPrompt }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Falha ao gerar o plano de aula.');
+      }
+
+      const data = await response.json();
+      if (data && typeof data === 'object' && 'tituloAula' in data) {
+        setPlanejamento(data);
+        setEditedPlanejamento(data);
+        setShowMethodSelection(true);
+      } else {
+        throw new Error('Resposta do backend não contém um plano de aula válido.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Falha ao gerar o plano de aula. Por favor, tente novamente.');
+    } finally {
+      setIsProcessingText(false);
     }
   };
 
@@ -729,7 +812,7 @@ Instruções Adicionais:
     return renderRichText(text || '', isList);
   };
 
-  const shouldBlockMainInteractions = isGenerating || isEditMode;
+  const shouldBlockMainInteractions = isGenerating || isEditMode || isProcessingText;
 
   return (
     <motion.div
@@ -738,7 +821,7 @@ Instruções Adicionais:
       transition={{ delay: 0.2, duration: 0.5 }}
       className="left-column"
     >
-      {!isGenerating && (
+      {!isGenerating && !isProcessingText && (
         <div className="card">
           <div className="card-title-group">
             <Sparkles style={{ width: '20px', height: '20px', color: '#6b46c1' }} />
@@ -769,6 +852,20 @@ Instruções Adicionais:
                   </>
                 ) : (
                   <>Gerar Planejamento</>
+                )}
+              </button>
+              <button
+                onClick={handleGerarSlidesFromText}
+                disabled={!demanda.trim() || shouldBlockMainInteractions}
+                className="generate-button"
+                style={{ marginTop: '10px' }}
+              >
+                {isProcessingText ? (
+                  <>
+                    <div className="spinner-circle"></div>Gerando Slides...
+                  </>
+                ) : (
+                  <>Gerar Slides (do Texto)</>
                 )}
               </button>
             </div>
