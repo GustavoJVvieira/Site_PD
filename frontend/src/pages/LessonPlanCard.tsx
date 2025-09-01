@@ -427,12 +427,12 @@ O tema da apresentação é: "${planejamento?.tituloAula}".
 
 Instruções Adicionais:
 - Mantenha a linguagem clara e envolvente para todos os slides.
-- A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown ```json\n...\n```.
+- A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown \`\`\`json\n...\n\`\`\`.
 - NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
-- As listas devem estar em formato de array de strings para quebras de linha (`"text": ["Ponto 1", "Ponto 2"]`).
+- As listas devem estar em formato de array de strings para quebras de linha (\`"text": ["Ponto 1", "Ponto 2"]\`).
 - O título deve ser curto.
 `
-    
+
     try {
       const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
