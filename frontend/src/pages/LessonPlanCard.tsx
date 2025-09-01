@@ -51,6 +51,7 @@ export interface Slide {
   questions?: string[];
   image_prompt?: string;
   image_url?: string;
+  topicos?: string[]; // Adicionei a interface para os tópicos
 }
 
 export interface LessonPlanCardProps {
@@ -285,6 +286,17 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     });
   };
 
+  const handleTopicChange = (slideIndex: number, topicIndex: number) => (e: ChangeEvent<HTMLInputElement>) => {
+    setSlideData(prev => {
+      if (!prev) return null;
+      const newSlides = [...prev];
+      const topics = [...(newSlides[slideIndex].topicos || [])];
+      topics[topicIndex] = e.target.value;
+      newSlides[slideIndex].topicos = topics;
+      return newSlides;
+    });
+  };
+
   const sendToN8nAndProcessResponse = async () => {
     if (!slideData) return;
 
@@ -378,82 +390,123 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   };
 
   const handleGerarSlidesFromText = async () => {
+    if (!demanda.trim()) {
+      setError('Por favor, descreva o tema para gerar os slides.');
+      return;
+    }
+
     setIsProcessingText(true);
     setPlanejamento(null);
     setEditedPlanejamento(null);
     setIsEditMode(false);
     setError(null);
   
-    // Prompt para gerar um plano de aula completo a partir de um texto livre
-    const lessonPlanPrompt = `
-      Crie um plano de aula completo seguindo a metodologia de ensino "Desenvolve" a partir do seguinte texto ou tema livre: "${demanda}".
+    const slidePrompt = `
+      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre o tema: "${demanda}".
 
-      O plano deve ser estruturado rigorosamente no formato JSON. Não inclua texto introdutório, explicações ou qualquer outro tipo de conteúdo fora do JSON. A sua resposta deve ser APENAS o objeto JSON.
+      Você deve seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante.
 
-      {
-        "tituloAula": "Título claro e direto da aula",
-        "ativacao": {
-          "titulo": "Ativação",
-          "metodologia": "Metodologia a ser utilizada (Ex: Debate em grupo, Perguntas e Respostas)",
-          "pergunta_inicial": "Uma pergunta provocadora para iniciar a aula.",
-          "atividade": "Descrição da atividade inicial para ativar o conhecimento prévio dos alunos. Pode incluir listas com tópicos."
-        },
-        "problema_real": {
-          "titulo": "Problema Real",
-          "metodologia": "Metodologia a ser utilizada (Ex: Estudo de caso, Análise de cenários)",
-          "cenario": "Descrição de um cenário real ou fictício que contextualiza o problema. Pode conter links ou imagens em formato markdown.",
-          "pergunta_problema": "A pergunta central que o problema levanta.",
-          "importancia": ["Explicação da relevância do problema na vida real dos alunos, em formato de lista."]
-        },
-        "investigacao": {
-          "titulo": "Investigação",
-          "metodologia": "Metodologia a ser utilizada (Ex: Pesquisa guiada, Exploração de recursos)",
-          "perguntas_guiadas": ["Lista de perguntas que guiam a investigação dos alunos."],
-          "elementos_descobertos": ["Lista de conceitos ou elementos que os alunos devem descobrir na investigação."]
-        },
-        "solucao_pratica": {
-          "titulo": "Solução Prática",
-          "metodologia": "Metodologia a ser utilizada (Ex: Brainstorming, Prototipagem, Codificação)",
-          "descricao": "Descrição detalhada de como os alunos irão aplicar o conhecimento para criar uma solução prática. Pode incluir blocos de código markdown se for relevante."
-        },
-        "mini_projeto": {
-          "titulo": "Mini-Projeto",
-          "metodologia": "Metodologia do mini-projeto (Ex: Construção de modelo, Desenvolvimento de protótipo)",
-          "desafio": ["Descrição do desafio final para os alunos aplicarem o que aprenderam, em formato de lista."]
-        },
-        "sugestaoAulasCSV": [
-          {
-            "idAula": "ID da aula no currículo (ex: '101')",
-            "temaAula": "Tema da aula",
-            "justificativa": "Breve justificativa de por que essa aula se conecta ao tema."
-          }
-        ],
-        "observacoesIA": "Observações adicionais ou notas pedagógicas da IA sobre o plano de aula gerado."
-      }
+      - **Slide 1: Título e Contexto**
+          - number: 1
+          - title: Dê um título curto e impactante para o tema.
+          - text: Descreva o contexto da aula e o que será abordado.
+          - image_prompt: Crie um prompt descritivo e criativo para gerar uma imagem visual que represente o conteúdo.
+
+      - **Slide 2: Problema**
+          - number: 2
+          - title: Crie um título para o problema a ser discutido.
+          - text: Apresente o problema de forma clara, usando tópicos para listar os principais pontos negativos ou desafios.
+          - image_prompt: Crie um prompt para uma imagem que represente visualmente este problema.
+
+      - **Slide 3: Solução**
+          - number: 3
+          - title: Dê um título que apresente a solução para o problema.
+          - text: Liste, em tópicos, a solução para o problema, explicando o que será ensinado para resolvê-lo.
+          - image_prompt: Crie um prompt para uma imagem que represente visualmente a solução.
+
+      - **Slide 4: Prática**
+          - number: 4
+          - title: Crie um título para a seção prática.
+          - intro: Crie um parágrafo introdutório para o slide.
+          - topicos: Crie um array de duas strings com exemplos claros de aplicação prática do conteúdo.
+          - image_prompt: Crie um prompt para uma imagem que represente a prática de forma visualmente atraente.
+
+      - **Slide 6: Tarefa/Mini-Desafio**
+          - number: 6
+          - title: Proponha um título para a tarefa ou mini-desafio.
+          - text: Proponha uma tarefa rápida e prática para que o público aplique o que aprendeu.
+          - image_prompt: Crie um prompt para uma imagem que represente visualmente a tarefa.
+
+      - **Slide 7: Conclusão**
+          - number: 7
+          - title: Dê um título para a conclusão.
+          - text: Crie um texto que resuma os pontos principais da apresentação e deixe uma mensagem final impactante.
+          - image_prompt: Crie um prompt para uma imagem que represente a mensagem final de forma memorável.
+
+      Instruções Adicionais:
+      - Mantenha a linguagem clara e envolvente para todos os slides.
+      - A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown \`\`\`json\n...\n\`\`\`.
+      - NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
+      - As listas devem estar em formato de array de strings para quebras de linha (\`"text": ["Ponto 1", "Ponto 2"]\`).
+      - O título deve ser curto.
+      - Garanta que o Slide 4 sempre contenha a propriedade "topicos" como um array de strings.
     `;
 
     try {
-      const response = await fetch('https://site-pd.onrender.com/gemini/generate-lesson-plan', {
+      const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: lessonPlanPrompt }),
+        body: JSON.stringify({ prompt: slidePrompt }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao gerar o plano de aula.');
+        throw new Error(errorData.message || 'Falha ao gerar o plano de slides.');
       }
 
       const data = await response.json();
-      if (data && typeof data === 'object' && 'tituloAula' in data) {
-        setPlanejamento(data);
-        setEditedPlanejamento(data);
-        setShowMethodSelection(true);
+      if (data.rawText) {
+        const jsonMatch = data.rawText.match(/```json\n([\s\S]*?)```/);
+        let jsonString: string;
+
+        if (jsonMatch && jsonMatch[1]) {
+          jsonString = jsonMatch[1].trim();
+        } else {
+          jsonString = data.rawText.trim();
+        }
+
+        const isValidJson = (str: string) => {
+          try {
+            JSON.parse(str);
+            return true;
+          } catch {
+            return false;
+          }
+        };
+
+        if (isValidJson(jsonString)) {
+          const slideJson = JSON.parse(jsonString);
+          if (slideJson.slides && Array.isArray(slideJson.slides)) {
+            const initialSlideData = slideJson.slides.map((slide: Slide) => {
+              if (generationMethod === 'web') {
+                return { ...slide, image_prompt: undefined, image_url: '' };
+              }
+              return slide;
+            });
+            setSlideData(initialSlideData);
+            setShowSlidePopup(true);
+          } else {
+            setError('Formato de resposta inválido: propriedade "slides" não encontrada ou não é um array.');
+          }
+        } else {
+          setError('A resposta do backend (rawText) não contém um JSON válido após extração. Verifique os logs para mais detalhes.');
+        }
       } else {
-        throw new Error('Resposta do backend não contém um plano de aula válido.');
+        setError('Formato de resposta inválido do backend.');
       }
     } catch (err: any) {
-      setError(err.message || 'Falha ao gerar o plano de aula. Por favor, tente novamente.');
+      console.error('Erro ao processar a geração de slides:', err);
+      setError(err.message || 'Falha ao gerar o plano de slides. Por favor, tente novamente.');
     } finally {
       setIsProcessingText(false);
     }
@@ -470,35 +523,41 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 O tema da apresentação é: "${planejamento?.tituloAula}".
 
 - **Slide 1: Título e Contexto**
-    - Título: Dê um título curto e impactante para o tema.
-    - Texto: Descreva o contexto da aula, o que foi visto anteriormente e o que será abordado agora.
-    - **image_prompt**: Crie um prompt descritivo e criativo para gerar uma imagem visual que represente o conteúdo.
+    - number: 1
+    - title: Dê um título curto e impactante para o tema.
+    - text: Descreva o contexto da aula, o que foi visto anteriormente e o que será abordado agora.
+    - image_prompt: Crie um prompt descritivo e criativo para gerar uma imagem visual que represente o conteúdo.
 
 - **Slide 2: Problema**
-    - Título: Crie um título para o problema a ser discutido.
-    - Texto: Apresente o problema de forma clara, usando tópicos para listar os principais pontos negativos ou desafios que os alunos enfrentam.
-    - **image_prompt**: Crie um prompt para uma imagem que represente visualmente este problema.
+    - number: 2
+    - title: Crie um título para o problema a ser discutido.
+    - text: Apresente o problema de forma clara, usando tópicos para listar os principais pontos negativos ou desafios que os alunos enfrentam.
+    - image_prompt: Crie um prompt para uma imagem que represente visualmente este problema.
 
 - **Slide 3: Solução**
-    - Título: Dê um título que apresente a solução para o problema.
-    - Texto: Liste, em tópicos, a solução para o problema, explicando o que será ensinado para resolvê-lo.
-    - **image_prompt**: Crie um prompt para uma imagem que represente visualmente a solução.
+    - number: 3
+    - title: Dê um título que apresente a solução para o problema.
+    - text: Liste, em tópicos, a solução para o problema, explicando o que será ensinado para resolvê-lo.
+    - image_prompt: Crie um prompt para uma imagem que represente visualmente a solução.
 
 - **Slide 4: Prática**
-    - Título: Crie um título para a seção prática.
-    - Intro: Crie um parágrafo introdutório para o slide.
-    - Tópicos: Crie dois tópicos que incentivem a aplicação prática do conteúdo, com exemplos claros.
-    - **image_prompt**: Crie um prompt para uma imagem que represente a prática de forma visualmente atraente.
+    - number: 4
+    - title: Crie um título para a seção prática.
+    - intro: Crie um parágrafo introdutório para o slide.
+    - topicos: Crie um array de duas strings com exemplos claros de aplicação prática do conteúdo.
+    - image_prompt: Crie um prompt para uma imagem que represente a prática de forma visualmente atraente.
 
 - **Slide 6: Tarefa/Mini-Desafio**
-    - Título: Proponha um título para a tarefa ou mini-desafio.
-    - Texto: Proponha uma tarefa rápida e prática para que o público aplique o que aprendeu.
-    - **image_prompt**: Crie um prompt para uma imagem que represente visualmente a tarefa.
+    - number: 6
+    - title: Proponha um título para a tarefa ou mini-desafio.
+    - text: Proponha uma tarefa rápida e prática para que o público aplique o que aprendeu.
+    - image_prompt: Crie um prompt para uma imagem que represente visualmente a tarefa.
 
 - **Slide 7: Conclusão**
-    - Título: Dê um título para a conclusão.
-    - Texto: Crie um texto que resuma os pontos principais da apresentação e deixe uma mensagem final impactante.
-    - **image_prompt**: Crie um prompt para uma imagem que represente a mensagem final de forma memorável.
+    - number: 7
+    - title: Dê um título para a conclusão.
+    - text: Crie um texto que resuma os pontos principais da apresentação e deixe uma mensagem final impactante.
+    - image_prompt: Crie um prompt para uma imagem que represente a mensagem final de forma memorável.
 
 Instruções Adicionais:
 - Mantenha a linguagem clara e envolvente para todos os slides.
@@ -1201,6 +1260,20 @@ Instruções Adicionais:
                       />
                     ))}
                   </>
+                )}
+                {slide.topicos && (
+                    <>
+                        <label>Tópicos:</label>
+                        {slide.topicos.map((topic, tIndex) => (
+                            <input
+                                key={tIndex}
+                                type="text"
+                                value={topic}
+                                onChange={handleTopicChange(index, tIndex)}
+                                style={{ width: '100%', marginBottom: '5px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
+                            />
+                        ))}
+                    </>
                 )}
                 {generationMethod === 'ai' ? (
                   <>
