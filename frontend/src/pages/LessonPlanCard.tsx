@@ -51,7 +51,7 @@ export interface Slide {
   questions?: string[];
   image_prompt?: string;
   image_url?: string;
-  topicos?: string[]; // Adicionei a interface para os tópicos
+  topicos?: string[];
 }
 
 export interface LessonPlanCardProps {
@@ -159,14 +159,13 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
 }) => {
   const lessonPlanRef = useRef<HTMLDivElement>(null);
   const currentPlanejamento = isEditMode && editedPlanejamento ? editedPlanejamento : planejamento;
-  const [isGeneratingSlides, setIsGeneratingSlides] = useState<boolean>(false);
+  const [isGeneratingSlides] = useState<boolean>(false);
   const [showSlidePopup, setShowSlidePopup] = useState<boolean>(false);
   const [slideData, setSlideData] = useState<Slide[] | null>(null);
   const [isSendingToN8n, setIsSendingToN8n] = useState<boolean>(false);
   const [useAIImages, setUseAIImages] = useState<boolean>(true);
-  const [generationMethod, setGenerationMethod] = useState<'ai' | 'web' | null>(null);
+  const [generationMethod, setGenerationMethod] = useState<'ai' | 'web' | null>('ai'); // Valor padrão
   const [email, setEmail] = useState<string>('');
-  const [showMethodSelection, setShowMethodSelection] = useState<boolean>(false);
   const [showCustomPlanInput, setShowCustomPlanInput] = useState<boolean>(false);
   const [customPlan, setCustomPlan] = useState<string>('');
   const [isProcessingText, setIsProcessingText] = useState<boolean>(false);
@@ -320,22 +319,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       });
 
       if (n8nResponse.ok) {
-        if (generationMethod === 'ai') {
-          console.log('JSON enviado com sucesso para o n8n. O slide será enviado por e-mail.');
-          alert(`Solicitação enviada! O slide será enviado para ${email} em breve.`);
-        } else {
-          const blob = await n8nResponse.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${currentPlanejamento?.tituloAula?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'slides'}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          window.URL.revokeObjectURL(url);
-          alert('Slides gerados e baixados com sucesso!');
-        }
-
+        console.log('JSON enviado com sucesso para o n8n. O slide será enviado por e-mail.');
+        alert(`Solicitação enviada! O slide será enviado para ${email} em breve.`);
         setShowSlidePopup(false);
       } else {
         console.error('Erro ao enviar JSON para o webhook do n8n:', n8nResponse.statusText);
@@ -352,15 +337,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const closePopup = () => {
     setShowSlidePopup(false);
     setIsSendingToN8n(false);
-    setShowMethodSelection(false);
     setShowCustomPlanInput(false);
     setGenerationMethod(null);
-  };
-
-  const selectGenerationMethod = (method: 'ai' | 'web') => {
-    setGenerationMethod(method);
-    setShowMethodSelection(false);
-    gerarSlidesByMethod();
   };
 
   const handleGerarPlanoDeSlidesClick = () => {
@@ -379,7 +357,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
         setEditedPlanejamento(loadedPlan);
         setError(null);
         setShowCustomPlanInput(false);
-        setShowMethodSelection(true);
+        setShowSlidePopup(true); // Redireciona para o pop-up de edição de slides
       } else {
         setError('O texto inserido não é um plano de aula válido. Verifique o formato JSON.');
       }
@@ -402,53 +380,52 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setError(null);
   
     const slidePrompt = `
-      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre o tema: "${demanda}".
+      Você é um assistente criativo. A partir do seguinte tema: "${demanda}", crie um roteiro de apresentação de slides no formato JSON.
 
-      Você deve seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante.
+      O roteiro deve ter 6 slides e cada um deve seguir a estrutura abaixo:
 
       - **Slide 1: Título e Contexto**
           - number: 1
-          - title: Dê um título curto e impactante para o tema.
-          - text: Descreva o contexto da aula e o que será abordado.
-          - image_prompt: Crie um prompt descritivo e criativo para gerar uma imagem visual que represente o conteúdo.
+          - title: Título da apresentação.
+          - text: Contexto da aula e o que será abordado.
+          - image_prompt: Prompt para gerar uma imagem relacionada.
 
       - **Slide 2: Problema**
           - number: 2
-          - title: Crie um título para o problema a ser discutido.
-          - text: Apresente o problema de forma clara, usando tópicos para listar os principais pontos negativos ou desafios.
-          - image_prompt: Crie um prompt para uma imagem que represente visualmente este problema.
+          - title: Título do problema.
+          - text: Descrição do problema em formato de texto.
+          - image_prompt: Prompt para gerar uma imagem relacionada ao problema.
 
       - **Slide 3: Solução**
           - number: 3
-          - title: Dê um título que apresente a solução para o problema.
-          - text: Liste, em tópicos, a solução para o problema, explicando o que será ensinado para resolvê-lo.
-          - image_prompt: Crie um prompt para uma imagem que represente visualmente a solução.
+          - title: Título da solução.
+          - text: Descrição da solução em formato de texto.
+          - image_prompt: Prompt para gerar uma imagem da solução.
 
       - **Slide 4: Prática**
           - number: 4
-          - title: Crie um título para a seção prática.
-          - intro: Crie um parágrafo introdutório para o slide.
-          - topicos: Crie um array de duas strings com exemplos claros de aplicação prática do conteúdo.
-          - image_prompt: Crie um prompt para uma imagem que represente a prática de forma visualmente atraente.
+          - title: Título da seção prática.
+          - intro: Parágrafo introdutório para o slide.
+          - topicos: Crie um array de duas strings com exemplos claros de aplicação prática.
+          - image_prompt: Prompt para gerar uma imagem que represente a prática.
 
       - **Slide 6: Tarefa/Mini-Desafio**
           - number: 6
-          - title: Proponha um título para a tarefa ou mini-desafio.
-          - text: Proponha uma tarefa rápida e prática para que o público aplique o que aprendeu.
-          - image_prompt: Crie um prompt para uma imagem que represente visualmente a tarefa.
+          - title: Título da tarefa.
+          - text: Descrição da tarefa ou mini-desafio.
+          - image_prompt: Prompt para gerar uma imagem da tarefa.
 
       - **Slide 7: Conclusão**
           - number: 7
-          - title: Dê um título para a conclusão.
-          - text: Crie um texto que resuma os pontos principais da apresentação e deixe uma mensagem final impactante.
-          - image_prompt: Crie um prompt para uma imagem que represente a mensagem final de forma memorável.
+          - title: Título da conclusão.
+          - text: Resumo dos pontos principais da apresentação.
+          - image_prompt: Prompt para gerar uma imagem da conclusão.
 
       Instruções Adicionais:
-      - Mantenha a linguagem clara e envolvente para todos os slides.
-      - A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown \`\`\`json\n...\n\`\`\`.
-      - NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
-      - As listas devem estar em formato de array de strings para quebras de linha (\`"text": ["Ponto 1", "Ponto 2"]\`).
-      - O título deve ser curto.
+      - O formato da resposta deve ser EXCLUSIVAMENTE um objeto JSON.
+      - A propriedade "slides" deve ser um array de objetos, onde cada objeto representa um slide.
+      - NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco JSON.
+      - O título e texto devem ser claros e concisos.
       - Garanta que o Slide 4 sempre contenha a propriedade "topicos" como um array de strings.
     `;
 
@@ -488,13 +465,11 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
           const slideJson = JSON.parse(jsonString);
           if (slideJson.slides && Array.isArray(slideJson.slides)) {
             const initialSlideData = slideJson.slides.map((slide: Slide) => {
-              if (generationMethod === 'web') {
-                return { ...slide, image_prompt: undefined, image_url: '' };
-              }
-              return slide;
+              return { ...slide, image_prompt: slide.image_prompt };
             });
             setSlideData(initialSlideData);
-            setShowSlidePopup(true);
+            setGenerationMethod('ai'); // Define o método de geração de slides como 'ai'
+            setShowSlidePopup(true); // Exibe o pop-up de edição de slides
           } else {
             setError('Formato de resposta inválido: propriedade "slides" não encontrada ou não é um array.');
           }
@@ -509,121 +484,6 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       setError(err.message || 'Falha ao gerar o plano de slides. Por favor, tente novamente.');
     } finally {
       setIsProcessingText(false);
-    }
-  };
-
-  const gerarSlidesByMethod = async () => {
-    setIsGeneratingSlides(true);
-    setIsSendingToN8n(false);
-    setError(null);
-
-    const slidePrompt = `
-      Você é o diretor criativo de uma equipe de design de apresentações. Sua missão é criar o roteiro de uma apresentação de slides completa sobre um tema específico. Você precisa seguir este esqueleto rigoroso de seis slides, preenchendo cada um com conteúdo criativo e relevante.
-
-O tema da apresentação é: "${planejamento?.tituloAula}".
-
-- **Slide 1: Título e Contexto**
-    - number: 1
-    - title: Dê um título curto e impactante para o tema.
-    - text: Descreva o contexto da aula, o que foi visto anteriormente e o que será abordado agora.
-    - image_prompt: Crie um prompt descritivo e criativo para gerar uma imagem visual que represente o conteúdo.
-
-- **Slide 2: Problema**
-    - number: 2
-    - title: Crie um título para o problema a ser discutido.
-    - text: Apresente o problema de forma clara, usando tópicos para listar os principais pontos negativos ou desafios que os alunos enfrentam.
-    - image_prompt: Crie um prompt para uma imagem que represente visualmente este problema.
-
-- **Slide 3: Solução**
-    - number: 3
-    - title: Dê um título que apresente a solução para o problema.
-    - text: Liste, em tópicos, a solução para o problema, explicando o que será ensinado para resolvê-lo.
-    - image_prompt: Crie um prompt para uma imagem que represente visualmente a solução.
-
-- **Slide 4: Prática**
-    - number: 4
-    - title: Crie um título para a seção prática.
-    - intro: Crie um parágrafo introdutório para o slide.
-    - topicos: Crie um array de duas strings com exemplos claros de aplicação prática do conteúdo.
-    - image_prompt: Crie um prompt para uma imagem que represente a prática de forma visualmente atraente.
-
-- **Slide 6: Tarefa/Mini-Desafio**
-    - number: 6
-    - title: Proponha um título para a tarefa ou mini-desafio.
-    - text: Proponha uma tarefa rápida e prática para que o público aplique o que aprendeu.
-    - image_prompt: Crie um prompt para uma imagem que represente visualmente a tarefa.
-
-- **Slide 7: Conclusão**
-    - number: 7
-    - title: Dê um título para a conclusão.
-    - text: Crie um texto que resuma os pontos principais da apresentação e deixe uma mensagem final impactante.
-    - image_prompt: Crie um prompt para uma imagem que represente a mensagem final de forma memorável.
-
-Instruções Adicionais:
-- Mantenha a linguagem clara e envolvente para todos os slides.
-- A resposta deve ser EXCLUSIVAMENTE um objeto JSON válido, envolto em um bloco markdown \`\`\`json\n...\n\`\`\`.
-- NÃO inclua nenhum texto adicional, explicações ou formatação fora do bloco markdown.
-- As listas devem estar em formato de array de strings para quebras de linha (\`"text": ["Ponto 1", "Ponto 2"]\`).
-- O título deve ser curto.
-`
-
-    try {
-      const response = await fetch('https://site-pd.onrender.com/gemini/chat-with-lesson-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: slidePrompt }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao gerar o plano de slides.');
-      }
-
-      const data = await response.json();
-      if (data.rawText) {
-        const jsonMatch = data.rawText.match(/```json\n([\s\S]*?)```/);
-        let jsonString: string;
-
-        if (jsonMatch && jsonMatch[1]) {
-          jsonString = jsonMatch[1].trim();
-        } else {
-          jsonString = data.rawText.trim();
-        }
-
-        const isValidJson = (str: string) => {
-          try {
-            JSON.parse(str);
-            return true;
-          } catch {
-            return false;
-          }
-        };
-
-        if (isValidJson(jsonString)) {
-          const slideJson = JSON.parse(jsonString);
-          if (slideJson.slides && Array.isArray(slideJson.slides)) {
-            const initialSlideData = slideJson.slides.map((slide: Slide) => {
-              if (generationMethod === 'web') {
-                return { ...slide, image_prompt: undefined, image_url: '' };
-              }
-              return slide;
-            });
-            setSlideData(initialSlideData);
-            setShowSlidePopup(true);
-          } else {
-            setError('Formato de resposta inválido: propriedade "slides" não encontrada ou não é um array.');
-          }
-        } else {
-          setError('A resposta do backend (rawText) não contém um JSON válido após extração. Verifique os logs para mais detalhes.');
-        }
-      } else {
-        setError('Formato de resposta inválido do backend.');
-      }
-    } catch (err: any) {
-      console.error('Erro ao processar a geração de slides:', err);
-      setError(err.message || 'Falha ao gerar o plano de slides. Por favor, tente novamente.');
-    } finally {
-      setIsGeneratingSlides(false);
     }
   };
 
@@ -942,7 +802,7 @@ Instruções Adicionais:
       )}
 
       <AnimatePresence mode="wait">
-        {isGenerating && (
+        {(isGenerating || isProcessingText) && (
           <motion.div
             key="spinner"
             initial={{ opacity: 0 }}
@@ -954,7 +814,7 @@ Instruções Adicionais:
             <div className="spinner-circle"></div>
           </motion.div>
         )}
-        {currentPlanejamento && !isGenerating && (
+        {currentPlanejamento && !isGenerating && !isProcessingText && (
           <motion.div
             key="lesson-card"
             initial={{ opacity: 0, y: 20 }}
@@ -1162,40 +1022,12 @@ Instruções Adicionais:
         </div>
       )}
 
-      {/* Pop-up de seleção do método */}
-      {showMethodSelection && (
-        <div className="popup-overlay">
-          <div className="popup-content">
-            <h2>Como você quer gerar os slides?</h2>
-            <p>Selecione uma das opções abaixo para continuar.</p>
-            <div className="button-group">
-              <button
-                onClick={() => selectGenerationMethod('ai')}
-                className="generate-button"
-              >
-                Gerar com IA (Prompts e E-mail)
-              </button>
-              <button
-                onClick={() => selectGenerationMethod('web')}
-                className="edit-button"
-              >
-                Gerar via Web (Link de Imagem)
-              </button>
-            </div>
-            <button onClick={closePopup} className="cancel-edit-button" style={{ marginTop: '10px' }}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Pop-up de revisão e edição dos slides */}
       {showSlidePopup && slideData && (
         <div className="popup-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="popup-content" style={{ background: '#000000', color: '#ffffff', padding: '20px', borderRadius: '8px', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
             <h2>Revise e Edite o Plano de Slides</h2>
-            {generationMethod === 'ai' && (
-              <div style={{ marginBottom: '15px' }}>
+            <div style={{ marginBottom: '15px' }}>
                 <p>O slide será enviado para o seu e-mail.</p>
                 <label>Seu E-mail:</label>
                 <input
@@ -1214,7 +1046,6 @@ Instruções Adicionais:
                   Gerar imagens com IA (usar prompts)
                 </label>
               </div>
-            )}
             {slideData.map((slide, index) => (
               <div key={index} style={{ marginBottom: '20px' }}>
                 <h3>Slide {slide.number}</h3>
@@ -1275,36 +1106,24 @@ Instruções Adicionais:
                         ))}
                     </>
                 )}
-                {generationMethod === 'ai' ? (
-                  <>
-                    <label>Prompt de Imagem Recomendada:</label>
-                    <textarea
-                      value={slide.image_prompt || ''}
-                      onChange={handleSlideChange(index, 'image_prompt')}
-                      rows={3}
-                      style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <label>Link da Imagem:</label>
-                    <input
-                      type="text"
-                      value={slide.image_url || ''}
-                      onChange={handleSlideChange(index, 'image_url')}
-                      style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
-                    />
-                  </>
-                )}
+                <>
+                  <label>Prompt de Imagem Recomendada:</label>
+                  <textarea
+                    value={slide.image_prompt || ''}
+                    onChange={handleSlideChange(index, 'image_prompt')}
+                    rows={3}
+                    style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
+                  />
+                </>
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
                 onClick={sendToN8nAndProcessResponse}
                 className="generate-button"
-                disabled={isSendingToN8n || (generationMethod === 'ai' && !email)}
+                disabled={isSendingToN8n || !email}
               >
-                {isSendingToN8n ? 'Gerando...' : (generationMethod === 'ai' ? 'Enviar para n8n (o slide será enviado por e-mail)' : 'Gerar PDF via Web')}
+                {isSendingToN8n ? 'Gerando...' : 'Enviar para n8n (o slide será enviado por e-mail)'}
               </button>
               <button onClick={closePopup} className="cancel-edit-button">
                 Cancelar
