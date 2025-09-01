@@ -166,7 +166,8 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
   const [generationMethod, setGenerationMethod] = useState<'ai' | 'web' | null>(null);
   const [email, setEmail] = useState<string>('');
   const [showMethodSelection, setShowMethodSelection] = useState<boolean>(false);
-  const [showPlanSelection, setShowPlanSelection] = useState<boolean>(false); // NOVO ESTADO
+  const [showCustomPlanInput, setShowCustomPlanInput] = useState<boolean>(false); // NOVO ESTADO
+  const [customPlan, setCustomPlan] = useState<string>(''); // NOVO ESTADO
 
   const gerarPdfPadronizado = () => {
     if (!currentPlanejamento) {
@@ -339,7 +340,7 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
     setShowSlidePopup(false);
     setIsSendingToN8n(false);
     setShowMethodSelection(false);
-    setShowPlanSelection(false); // ATUALIZADO
+    setShowCustomPlanInput(false); // NOVO FLUXO
     setGenerationMethod(null);
   };
 
@@ -354,33 +355,24 @@ const LessonPlanCard: React.FC<LessonPlanCardProps> = ({
       setError("Gere um plano de aula primeiro para depois gerar o plano de slides.");
       return;
     }
-    setShowPlanSelection(true); // ATUALIZADO
+    setShowCustomPlanInput(true);
   };
 
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const fileContent = event.target?.result as string;
-          const loadedPlan = JSON.parse(fileContent);
-
-          if (loadedPlan && typeof loadedPlan === 'object' && 'tituloAula' in loadedPlan) {
-            setPlanejamento(loadedPlan);
-            setEditedPlanejamento(loadedPlan);
-            setError(null);
-            setShowPlanSelection(false);
-            setShowMethodSelection(true);
-          } else {
-            setError('O arquivo carregado não é um plano de aula válido. Verifique o formato JSON.');
-          }
-        } catch (err) {
-          console.error('Erro ao ler ou processar o arquivo:', err);
-          setError('Erro ao processar o arquivo. Verifique se é um JSON válido.');
-        }
-      };
-      reader.readAsText(file);
+  const handleCustomPlanSubmit = () => {
+    try {
+      const loadedPlan = JSON.parse(customPlan);
+      if (loadedPlan && typeof loadedPlan === 'object' && 'tituloAula' in loadedPlan) {
+        setPlanejamento(loadedPlan);
+        setEditedPlanejamento(loadedPlan);
+        setError(null);
+        setShowCustomPlanInput(false);
+        setShowMethodSelection(true);
+      } else {
+        setError('O texto inserido não é um plano de aula válido. Verifique o formato JSON.');
+      }
+    } catch (err) {
+      console.error('Erro ao processar o JSON:', err);
+      setError('Erro ao processar o texto. Verifique se é um JSON válido.');
     }
   };
 
@@ -985,35 +977,31 @@ Instruções Adicionais:
         )}
       </AnimatePresence>
 
-      {/* Pop-up de seleção do plano de aula */}
-      {showPlanSelection && (
+      {/* Pop-up para inserir o plano de aula */}
+      {showCustomPlanInput && (
         <div className="popup-overlay">
           <div className="popup-content">
-            <h2>Qual plano de aula você quer usar?</h2>
-            <p>Você pode usar o plano atual ou carregar um novo a partir de um arquivo JSON.</p>
+            <h2>Insira o Plano de Aula</h2>
+            <p>Cole seu plano de aula em formato JSON. O plano deve ser gerado antes de gerar os slides.</p>
+            <textarea
+              value={customPlan}
+              onChange={(e) => setCustomPlan(e.target.value)}
+              rows={15}
+              placeholder='Cole seu plano de aula JSON aqui...'
+              style={{ width: '100%', marginBottom: '10px', background: '#333333', color: '#ffffff', border: '1px solid #555555' }}
+            />
             <div className="button-group">
               <button
-                onClick={() => {
-                  setShowPlanSelection(false);
-                  setShowMethodSelection(true);
-                }}
+                onClick={handleCustomPlanSubmit}
+                disabled={!customPlan.trim()}
                 className="generate-button"
               >
-                Usar Plano Atual
+                Usar Este Plano
               </button>
-              <label className="file-upload-button">
-                Carregar Novo Plano
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                />
-              </label>
+              <button onClick={closePopup} className="cancel-edit-button">
+                Cancelar
+              </button>
             </div>
-            <button onClick={closePopup} className="cancel-edit-button" style={{ marginTop: '10px' }}>
-              Cancelar
-            </button>
           </div>
         </div>
       )}
